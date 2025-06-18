@@ -15,7 +15,7 @@ use raylib::{audio::RaylibAudio, ffi::SetTraceLogLevel, prelude::TraceLogLevel};
 use render::render;
 use step::step;
 
-use crate::inputs::process_input;
+use crate::{audio::Song, inputs::process_input};
 
 fn main() {
     ////////////////        GRAPHICS INIT        ////////////////
@@ -48,7 +48,7 @@ fn main() {
     };
     audio.set_music_volume(1.0);
     audio.set_sfx_volume(1.0);
-    // audio.play_song(Song::Title);
+    audio.play_song(Song::Title);
 
     ////////////////        MAIN LOOP        ////////////////
     let mut state = state::State::new();

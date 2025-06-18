@@ -18,6 +18,7 @@ pub enum SoundEffect {
     BallBounce3,
     BallBounce4,
     BallDrop,
+    BallHitPaddle,
     BallHitPaddleEr,
     BallWallBounce,
     Confirm,

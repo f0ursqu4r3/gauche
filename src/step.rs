@@ -54,7 +54,7 @@ fn step_title(state: &mut State, audio: &mut Audio) {
 }
 
 /// Handles tile-based gameplay logic by operating on entities.
-fn step_playing(state: &mut State, _audio: &mut Audio, graphics: &mut Graphics) {
+fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     // --- Player Control Logic ---
     // First, we check if a player entity even exists.
     if let Some(player_vid) = state.player_vid {
@@ -94,6 +94,7 @@ fn step_playing(state: &mut State, _audio: &mut Audio, graphics: &mut Graphics) 
                     {
                         if tile::walkable(*tile) {
                             player.pos = target_pos; // Update the entity's position.
+                            audio.play_sound_effect(SoundEffect::BallBounce1);
                         }
                     }
 
