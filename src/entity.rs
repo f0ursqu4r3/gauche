@@ -1,4 +1,4 @@
-use glam::{IVec2, Vec2};
+use glam::Vec2;
 
 use crate::sprite::Sprite;
 
@@ -98,6 +98,8 @@ pub struct Entity {
     pub health: u32,
     pub damage_vulnerability: DamageVulnerability,
     pub can_be_stunned: bool,
+    pub move_cooldown: f32,
+    pub move_cooldown_countdown: f32,
 
     pub alignment: Alignment,
 
@@ -134,6 +136,8 @@ impl Entity {
 
             health: 0,
             can_be_stunned: false,
+            move_cooldown: 0.0,
+            move_cooldown_countdown: 0.0,
 
             alignment: Alignment::Neutral,
 

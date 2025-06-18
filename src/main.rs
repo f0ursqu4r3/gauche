@@ -1,5 +1,4 @@
 mod audio;
-mod config;
 mod entity;
 mod entity_manager;
 mod graphics;
@@ -11,17 +10,12 @@ mod state;
 mod step;
 mod tile;
 
-use std::vec;
-
-use config::Config;
-use glam::Vec2;
 use raylib::{audio::RaylibAudio, ffi::SetTraceLogLevel, prelude::TraceLogLevel};
-use raylib::{consts::KeyboardKey, prelude::*};
 use render::render;
-use state::{EntityType, Player, State, World};
 use step::step;
 
 use crate::inputs::process_input;
+use crate::state::Mode;
 
 fn main() {
     ////////////////        GRAPHICS INIT        ////////////////
@@ -29,8 +23,7 @@ fn main() {
     unsafe {
         SetTraceLogLevel(TraceLogLevel::LOG_WARNING as i32);
     }
-    let sprite_assets_folder = "./assets/graphics/sprites";
-    let mut graphics = match graphics::Graphics::new(&mut rl, &rlt, &sprite_assets_folder) {
+    let mut graphics = match graphics::Graphics::new(&mut rl, &rlt) {
         Ok(graphics) => graphics,
         Err(e) => {
             println!("Error initializing graphics: {}", e);
@@ -46,16 +39,22 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let songs = audio::load_songs(&rl_audio_device);
-    let sounds = audio::load_sounds(&rl_audio_device);
-    let mut audio = audio::Audio::new(songs, sounds);
+    let mut audio = match audio::Audio::new(&rl_audio_device) {
+        Ok(audio) => audio,
+        Err(e) => {
+            println!("Error initializing audio: {}", e);
+            std::process::exit(1);
+        }
+    };
+    audio.set_music_volume(1.0);
+    audio.set_sfx_volume(1.0);
     // audio.play_song(Song::Title);
 
     ////////////////        MAIN LOOP        ////////////////
     let mut state = state::State::new();
     state.running = true;
-    // DEBUG: this is termporary to auto jump into start
-    // state.mode = Mode::Playing;
+    // DEBUG: this is temporary to auto jump into start
+    state.mode = Mode::Playing;
     let mut render_texture = match rl.load_render_texture(&rlt, graphics.dims.x, graphics.dims.y) {
         Ok(rt) => rt,
         Err(e) => {

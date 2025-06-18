@@ -3,13 +3,14 @@
    Fiddly render logic should probably be elsewhere, since i expect a few different modes.
 */
 
-use glam::{IVec2, Vec2};
 use raylib::prelude::*;
 
 use crate::{
     graphics::Graphics,
     state::{Mode, State},
 };
+
+pub const TILE_SIZE: f32 = 16.0;
 
 pub fn scale_and_blit_render_texture_to_window(
     draw_handle: &mut RaylibDrawHandle,
@@ -51,6 +52,8 @@ pub fn scale_and_blit_render_texture_to_window(
     );
 }
 
+/// The main render dispatcher. It draws everything into an off-screen render texture
+/// and then scales that texture to the window.
 pub fn render(
     rl: &mut RaylibHandle,
     rlt: &mut RaylibThread,
@@ -58,227 +61,186 @@ pub fn render(
     graphics: &mut Graphics,
     render_texture: &mut RenderTexture2D,
 ) {
+    // This is the primary handle for all drawing operations that happen on the final window.
     let mut draw_handle = rl.begin_drawing(rlt);
     {
-        let screen = &mut draw_handle.begin_texture_mode(rlt, render_texture);
-        screen.clear_background(Color::DARKBROWN);
+        // We begin a texture mode, which redirects all subsequent drawing commands
+        // to our off-screen render texture.
+        let mut screen = draw_handle.begin_texture_mode(rlt, render_texture);
+        screen.clear_background(Color::BLACK);
 
         match state.mode {
-            Mode::Title => render_title(state, graphics, screen),
-            Mode::Settings => render_settings_menu(state, graphics, screen),
-            Mode::VideoSettings => render_video_settings_menu(state, graphics, screen),
-            Mode::Playing => render_playing(state, graphics, screen),
-            Mode::StageTransition => render_stage_transition(state, graphics, screen),
-            Mode::GameOver => render_game_over(state, graphics, screen),
-            Mode::Win => render_win(state, graphics, screen),
-            // _ => {}
+            Mode::Title => render_title(state, graphics, &mut screen),
+            Mode::Settings => render_settings_menu(state, graphics, &mut screen),
+            Mode::VideoSettings => render_video_settings_menu(state, graphics, &mut screen),
+            Mode::Playing => render_playing(state, graphics, &mut screen),
+            Mode::GameOver => render_game_over(state, graphics, &mut screen),
+            Mode::Win => render_win(state, graphics, &mut screen),
+            // Add other states like StageTransition if they exist in the Mode enum
         }
-    }
+    } // The texture mode ends here automatically.
+
+    // After drawing to the texture, we draw the texture itself to the screen.
     scale_and_blit_render_texture_to_window(&mut draw_handle, graphics, render_texture);
 }
 
+/// Renders a simple title screen.
 pub fn render_title(
+    _state: &mut State,
+    graphics: &mut Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    screen.clear_background(Color::new(38, 43, 68, 255));
+
+    let title = "GAUCHE";
+    let font_size = 80;
+    let text_width = screen.measure_text(title, font_size);
+    screen.draw_text(
+        title,
+        (graphics.dims.x / 2) as i32 - (text_width / 2),
+        (graphics.dims.y / 2) as i32 - 60,
+        font_size,
+        Color::WHITE,
+    );
+
+    let subtitle = "Press ENTER to Start";
+    let sub_font_size = 22;
+    let sub_text_width = screen.measure_text(subtitle, sub_font_size);
+    screen.draw_text(
+        subtitle,
+        (graphics.dims.x / 2) as i32 - (sub_text_width / 2),
+        (graphics.dims.y / 2) as i32 + 20,
+        sub_font_size,
+        Color::LIGHTGRAY,
+    );
+}
+
+/// Renders the main gameplay view.
+pub fn render_playing(
     state: &mut State,
     graphics: &mut Graphics,
     screen: &mut RaylibTextureMode<RaylibDrawHandle>,
 ) {
-    let screen_center = (graphics.dims / 2).as_vec2();
-    graphics.camera.zoom = 1.0;
-    graphics.camera.rotation = 0.0;
-    graphics.camera.target = raylib::math::Vector2::new(screen_center.x, screen_center.y);
-    graphics.camera.offset = raylib::math::Vector2::new(screen_center.x, screen_center.y);
+    // --- Camera Setup ---
+    // FIX: Manually convert from glam::Vec2 to raylib::Vector2.
+    graphics.camera.target = Vector2::new(graphics.play_cam.pos.x, graphics.play_cam.pos.y);
+
+    // FIX: Manually convert from glam::Vec2 to raylib::Vector2.
+    let offset_vec = graphics.dims.as_vec2() / 2.0;
+    graphics.camera.offset = Vector2::new(offset_vec.x, offset_vec.y);
+
     {
         let mut d = screen.begin_mode2D(graphics.camera);
-        {
-            let color = raylib::color::Color::new(38, 43, 68, 255);
-            d.clear_background(color);
+        d.clear_background(Color::BLACK);
 
-            let screen_center = (graphics.dims / 2).as_vec2();
-            graphics.camera.target = raylib::math::Vector2::new(screen_center.x, screen_center.y);
-            // graphics.camera.target = raylib::math::Vector2::new(0.0, 0.0);
+        // --- World Rendering ---
+        let world_width_pixels = state.world.width as f32 * TILE_SIZE;
+        let world_height_pixels = state.world.height as f32 * TILE_SIZE;
 
-            /* we have 3 layers and we are doing basic paralax here
-            layer 3 is drawn first, and is the furthest back
-            layer 2 is drawn second, and is in the middle
-            layer 1 is drawn last, and is in the front, it moves the fastest
-
-            */
-
-            let layer_3 = &graphics.textures[Textures::TitleLayer3 as usize];
-            let layer_2 = &graphics.textures[Textures::TitleLayer2 as usize];
-            let layer_1 = &graphics.textures[Textures::TitleLayer1 as usize];
-
-            // use time to get paralax offset
-            let t = d.get_time() as f32;
-            let speed = 1.0;
-            let paralax_param = (t * speed).sin(); // range -1 to 1.0
-
-            // layer 3
-            let layer_3_max_displacement = 0.0001;
-            let layer_3_expansion_frac = 1.2 + 4.0 * layer_3_max_displacement;
-            let layer_3_target_size = Vec2::new(
-                graphics.dims.x as f32 * layer_3_expansion_frac,
-                graphics.dims.y as f32,
-            );
-
-            let mut layer_3_pos = -(layer_3_target_size - graphics.dims.as_vec2()) / 2.0;
-            layer_3_pos.x += paralax_param * graphics.dims.x as f32 * layer_3_max_displacement;
-
-            // layer 2
-            let layer_2_max_displacement = 0.02;
-            let layer_2_expansion_frac = 1.0 + 4.0 * layer_2_max_displacement;
-            let layer_2_target_size = Vec2::new(
-                graphics.dims.x as f32 * layer_2_expansion_frac,
-                graphics.dims.y as f32,
-            );
-
-            let mut layer_2_pos = -(layer_2_target_size - graphics.dims.as_vec2()) / 2.0;
-            layer_2_pos.x += paralax_param * graphics.dims.x as f32 * layer_2_max_displacement;
-
-            // layer 1
-            let layer_1_max_displacement = 0.06;
-            let layer_1_expansion_frac = 1.0 + 4.0 * layer_1_max_displacement;
-            let layer_1_target_size = Vec2::new(
-                graphics.dims.x as f32 * layer_1_expansion_frac,
-                graphics.dims.y as f32,
-            );
-
-            let mut layer_1_pos = -(layer_1_target_size - graphics.dims.as_vec2()) / 2.0;
-            layer_1_pos.x += paralax_param * graphics.dims.x as f32 * layer_1_max_displacement;
-
-            // draw layers
-            //  //  layer 3
-            d.draw_texture_pro(
-                &layer_3,
-                Rectangle::new(0.0, 0.0, layer_3.width() as f32, layer_3.height() as f32),
-                Rectangle::new(
-                    layer_3_pos.x,
-                    0.0,
-                    layer_3_target_size.x,
-                    layer_3_target_size.y,
-                ),
-                Vector2::new(0.0, 0.0),
-                0.0,
-                Color::WHITE,
-            );
-            //  //  layer 2
-            d.draw_texture_pro(
-                &layer_2,
-                Rectangle::new(0.0, 0.0, layer_2.width() as f32, layer_2.height() as f32),
-                Rectangle::new(
-                    layer_2_pos.x,
-                    0.0,
-                    layer_2_target_size.x,
-                    layer_2_target_size.y,
-                ),
-                Vector2::new(0.0, 0.0),
-                0.0,
-                Color::WHITE,
-            );
-            //  //  layer 1
-            d.draw_texture_pro(
-                &layer_1,
-                Rectangle::new(0.0, 0.0, layer_1.width() as f32, layer_1.height() as f32),
-                Rectangle::new(
-                    layer_1_pos.x,
-                    0.0,
-                    layer_1_target_size.x,
-                    layer_1_target_size.y,
-                ),
-                Vector2::new(0.0, 0.0),
-                0.0,
-                Color::WHITE,
-            );
-
-            draw_menu_title(&mut d, graphics, "Splonks");
-
-            // this is where we will show the options
-            // the currently selected option will be red, the others white
-            let ten_percent = (graphics.dims.y as f32 * 0.10) as i32;
-            let mut cursor = Vec2::new(graphics.dims.x as f32 * 0.15, graphics.dims.y as f32 * 0.6);
-
-            // draw title options
-            for option in TitleMenuOption::iter() {
-                let color = if option == state.title_menu_selection {
-                    Color::RED
+        // Draw Tiles and Grid
+        for y in 0..state.world.height {
+            for x in 0..state.world.width {
+                let tile_pixel_pos = Vector2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
+                let tile_color = if let Some(row) = state.world.tiles.get(y as usize) {
+                    if let Some(tile) = row.get(x as usize) {
+                        match tile.tile_type {
+                            crate::tile::TileType::Grass => Color::DARKGREEN,
+                            crate::tile::TileType::Wall => Color::DARKGRAY,
+                            crate::tile::TileType::Water => Color::DARKBLUE,
+                            crate::tile::TileType::Mountain => Color::BROWN,
+                        }
+                    } else {
+                        Color::BLACK
+                    }
                 } else {
-                    Color::WHITE
+                    Color::BLACK
                 };
-
-                let option_pos = Vec2::new(cursor.x, cursor.y);
-                let text = get_title_menu_option_name(&option);
-                let font_size =
-                    get_reasonable_font_scale(graphics.dims, crate::graphics::TextType::MenuItem);
-                d.draw_text(
-                    text,
-                    option_pos.x as i32,
-                    option_pos.y as i32,
-                    font_size,
-                    color,
+                d.draw_rectangle(
+                    tile_pixel_pos.x as i32,
+                    tile_pixel_pos.y as i32,
+                    TILE_SIZE as i32,
+                    TILE_SIZE as i32,
+                    tile_color,
                 );
-                cursor.y += ten_percent as f32;
+                d.draw_rectangle_lines(
+                    tile_pixel_pos.x as i32,
+                    tile_pixel_pos.y as i32,
+                    TILE_SIZE as i32,
+                    TILE_SIZE as i32,
+                    Color::new(255, 255, 255, 30),
+                );
+            }
+        }
+
+        d.draw_rectangle_lines_ex(
+            Rectangle::new(0.0, 0.0, world_width_pixels, world_height_pixels),
+            2.0,
+            Color::YELLOW,
+        );
+
+        // --- Entity Rendering ---
+        for entity in state.entity_manager.iter().filter(|e| e.active) {
+            if let Some(texture) = graphics.get_sprite_texture(entity.sprite) {
+                let entity_pixel_pos = entity.pos * TILE_SIZE;
+                let source_rec =
+                    Rectangle::new(0.0, 0.0, texture.width() as f32, texture.height() as f32);
+                let dest_rec =
+                    Rectangle::new(entity_pixel_pos.x, entity_pixel_pos.y, TILE_SIZE, TILE_SIZE);
+                let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
+
+                d.draw_texture_pro(texture, source_rec, dest_rec, origin, 0.0, Color::WHITE);
             }
         }
     }
+
+    // --- UI / Debug Text Rendering ---
+    let player_pos_text = if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            format!("Player Pos: ({:.2}, {:.2})", player.pos.x, player.pos.y)
+        } else {
+            "Player: <DEAD>".to_string()
+        }
+    } else {
+        "Player: <NONE>".to_string()
+    };
+    screen.draw_text(&player_pos_text, 10, 10, 20, Color::WHITE);
+    let zoom_text = format!("Zoom: {:.2}x (+/-)", graphics.camera.zoom);
+    screen.draw_text(&zoom_text, 10, 35, 20, Color::WHITE);
+    let entity_count = state.entity_manager.num_active_entities();
+    let entity_text = format!("Active Entities: {}", entity_count);
+    screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
 }
 
-// let mut d = rl.begin_drawing(&rlt);
-
-// // Draw the game world
-// d.clear_background(Color::new(30, 20, 30, 255));
-// for row in &game.world.tiles {
-//     for tile in row {
-//         let color = match tile.tile_type {
-//             TileType::Grass => Color::GREEN,
-//             TileType::Water => Color::BLUE,
-//             TileType::Mountain => Color::GRAY,
-//             TileType::Wall => Color::BLACK,
-//         };
-//         d.draw_rectangle(
-//             tile.pos.x as i32 * config.game.tile_size,
-//             tile.pos.y as i32 * config.game.tile_size,
-//             config.game.tile_size,
-//             config.game.tile_size,
-//             color,
-//         );
-//     }
-// }
-
-// // Draw player
-// d.draw_rectangle(
-//     game.player.pos.x as i32 * config.game.tile_size,
-//     game.player.pos.y as i32 * config.game.tile_size,
-//     config.game.tile_size,
-//     config.game.tile_size,
-//     Color::WHITE,
-// );
-
-// // Draw entities
-// for entity in &game.entities {
-//     let color = match entity.entity_type {
-//         EntityType::Monster => Color::RED,
-//         EntityType::Item => Color::YELLOW,
-//     };
-//     d.draw_rectangle(
-//         entity.pos.x as i32 * config.game.tile_size,
-//         entity.pos.y as i32 * config.game.tile_size,
-//         config.game.tile_size,
-//         config.game.tile_size,
-//         color,
-//     );
-// }
-
-// d.draw_text(
-//     &format!("Player Health: {}", game.player.health),
-//     10,
-//     10,
-//     20,
-//     Color::WHITE,
-// );
-// d.draw_text(
-//     &format!("Player Inventory: {}", game.player.inventory.len()),
-//     10,
-//     40,
-//     20,
-//     Color::WHITE,
-// );
+// --- Stub Functions ---
+pub fn render_settings_menu(
+    _state: &mut State,
+    _graphics: &mut Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    screen.clear_background(Color::DARKGRAY);
+    screen.draw_text("SETTINGS (STUB)", 20, 20, 30, Color::WHITE);
+}
+pub fn render_video_settings_menu(
+    _state: &mut State,
+    _graphics: &mut Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    screen.clear_background(Color::DARKGRAY);
+    screen.draw_text("VIDEO SETTINGS (STUB)", 20, 20, 30, Color::WHITE);
+}
+pub fn render_game_over(
+    _state: &mut State,
+    _graphics: &mut Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    screen.clear_background(Color::MAROON);
+    screen.draw_text("GAME OVER (STUB)", 20, 20, 30, Color::WHITE);
+}
+pub fn render_win(
+    _state: &mut State,
+    _graphics: &mut Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    screen.clear_background(Color::GOLD);
+    screen.draw_text("YOU WIN! (STUB)", 20, 20, 30, Color::WHITE);
+}

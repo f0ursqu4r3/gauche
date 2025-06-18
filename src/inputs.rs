@@ -4,12 +4,7 @@ use raylib::prelude::*;
 use crate::{
     audio::Audio,
     graphics::Graphics,
-    menu_settings::process_input_settings_menu,
-    menu_title::process_input_title,
-    menu_video::process_input_video_settings_menu,
     settings::KEY_DEBOUNCE_INTERVAL,
-    stage::{Stage, StageType},
-    stage_init::init_stage,
     state::{Mode, State},
 };
 
@@ -181,12 +176,31 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, _dt: f32) {
 
 ////////////////////////    PER GAME MODE INPUT PROCESSING     ////////////////////////
 
+pub fn process_input_title(
+    rl: &mut RaylibHandle,
+    _rlt: &mut RaylibThread,
+    state: &mut State,
+    _audio: &mut Audio,
+    _graphics: &mut Graphics,
+    _dt: f32,
+) {
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ENTER)
+        || rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SPACE)
+        || rl.is_gamepad_button_pressed(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+        )
+    {
+        state.mode = Mode::Playing;
+    }
+}
+
 pub fn process_input_playing(
     rl: &mut RaylibHandle,
     _rlt: &mut RaylibThread,
     state: &mut State,
     _audio: &mut Audio,
-    graphics: &mut Graphics,
+    _graphics: &mut Graphics,
     _dt: f32,
 ) {
     if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ESCAPE)
@@ -194,8 +208,6 @@ pub fn process_input_playing(
     {
         state.running = false;
     }
-
-    // randomize the stage tiles
 
     // Mouse
     // let raw_mouse_pos = rl.get_mouse_position();

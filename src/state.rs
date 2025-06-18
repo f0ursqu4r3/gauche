@@ -1,6 +1,8 @@
 use glam::Vec2;
 
 use crate::{
+    entity::VID,
+    entity_manager::EntityManager,
     inputs::{MenuInputDebounceTimers, MenuInputs, PlayingInputs},
     tile::{Tile, TileType},
 };
@@ -12,6 +14,10 @@ pub enum Mode {
     Playing,
     GameOver,
     Win,
+}
+
+pub enum Stage {
+    TestArena,
 }
 
 pub struct State {
@@ -37,12 +43,11 @@ pub struct State {
     pub frame_pause: u32,
 
     pub entity_manager: EntityManager,
+    pub player_vid: Option<VID>,
     // pub special_effects: Vec<Box<dyn SpecialEffect>>,
     pub stage: Stage,
 
     pub world: World,
-    pub player: Player,
-    pub entities: Vec<Entity>,
 
     pub rebuild_render_texture: bool,
 }
@@ -51,7 +56,6 @@ impl State {
     pub fn new() -> Self {
         Self {
             mode: Mode::Title,
-
             menu_inputs: MenuInputs::new(),
             menu_input_debounce_timers: MenuInputDebounceTimers::new(),
             playing_inputs: PlayingInputs::new(),
@@ -62,18 +66,23 @@ impl State {
             scene_frame: 0,
             frame: 0,
             stage_frame: 0,
+
+            game_over: false,
+            pause: false,
+            win: false,
+
+            points: 0,
+            deaths: 0,
             frame_pause: 0,
 
-            world: World::new(64, 64),
-            player: Player {
-                // center
-                pos: Vec2::new(32.0, 32.0),
-                health: 100,
-                inventory: vec![],
-            },
-            entities: vec![],
+            entity_manager: EntityManager::new(),
+            player_vid: None,
 
-            rebuild_render_texture: false,
+            stage: Stage::TestArena,
+
+            world: World::new(64, 64),
+
+            rebuild_render_texture: true,
         }
     }
 }
@@ -117,26 +126,4 @@ impl World {
                 .and_then(|row| row.get(y as usize))
         }
     }
-}
-
-pub struct Player {
-    pub pos: Vec2,
-    pub health: i32,
-    pub inventory: Vec<Item>,
-}
-
-pub struct Item {
-    pub name: String,
-    pub quantity: i32,
-}
-
-pub struct Entity {
-    pub id: u32,
-    pub pos: Vec2,
-    pub entity_type: EntityType,
-}
-
-pub enum EntityType {
-    Monster,
-    Item,
 }

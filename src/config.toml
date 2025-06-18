@@ -1,9 +1,0 @@
-[window]
-title = "Hello, Raylib!"
-width = 1280
-height = 720
-fullscreen = false
-
-[game]
-fps = 60
-tile_size = 16

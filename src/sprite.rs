@@ -1,34 +1,22 @@
-use std::{fs::File, io::BufReader, path::Path};
+use strum::{EnumCount, EnumIter, IntoStaticStr}; // Add IntoStaticStr here
 
-use glam::{UVec2, Vec2};
-use rand::Rng;
-use strum::{EnumCount, EnumIter, IntoEnumIterator};
-
-#[derive(Copy, Clone, Debug, EnumIter, EnumCount, PartialEq, Eq, Hash)]
+/// Enum representing all static sprites in the game.
+/// For example, `PlayerIdle` will automatically become "player_idle" when converted to a string.
+#[derive(Copy, Clone, Debug, EnumIter, EnumCount, PartialEq, Eq, Hash, IntoStaticStr)]
+#[strum(serialize_all = "snake_case")]
 pub enum Sprite {
     NoSprite,
     Reticle,
-    GrassTile,
 
-    PlayerNeutral,
+    // Player Sprites
+    Player,
     PlayerDead,
-}
 
-impl Sprite {
-    pub fn to_filename(self) -> &'static str {
-        match self {
-            Sprite::NoSprite => "no_sprite",
-            Sprite::Reticle => "reticle",
-            Sprite::GrassTile => "grass_tile",
+    // Tile Sprites
+    Grass,
+    Wall,
+    Water,
 
-            // player
-            Sprite::PlayerNeutral => "player_neutral",
-            Sprite::PlayerDead => "player_dead",
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct SpriteData {
-    pub size: UVec2,
+    // Enemy Sprites
+    Zombie,
 }

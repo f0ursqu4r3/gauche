@@ -1,229 +1,152 @@
-/* Asset Loading/ Unloading, caching, fetching, camera state is here.
-   This should mostly be contained state, graphics settings, and not have any logic.
-   Large rendering functions go in their own files.
+/* Asset Loading/Unloading, caching, fetching, and camera state are here.
+   responsible for holding all loaded graphical assets.
 */
 
-use crate::{
-    sprite::{Sprite, SpriteData},
-    tile::Tile,
-};
-
+use crate::sprite::Sprite;
 use glam::*;
 use raylib::prelude::*;
-use strum::{EnumCount, IntoEnumIterator};
+use std::collections::HashMap;
+use std::path::Path;
+use strum::IntoEnumIterator;
 
-use std::{collections::HashMap, path::Path};
-
-pub enum Shaders {
-    Grayscale,
-}
+pub const SPRITE_ASSETS_FOLDER: &str = "./assets/graphics/";
 
 pub struct PlayCam {
     pub pos: Vec2,
-    pub vel: Vec2,
-    pub acc: Vec2,
 }
 
 pub struct Graphics {
+    // Window and rendering dimensions
     pub window_dims: glam::UVec2,
-    pub dims: glam::UVec2,
+    pub dims: glam::UVec2, // This is the internal rendering resolution
     pub fullscreen: bool,
 
+    // Camera
     pub camera: Camera2D,
     pub play_cam: PlayCam,
 
-    pub sprites: Vec<SpriteData>,
-    pub sprite_textures: Vec<Texture2D>,
-    pub textures: Vec<Texture2D>,
-
+    // Asset storage
+    pub sprite_textures: HashMap<Sprite, Texture2D>,
     pub shaders: Vec<Shader>,
 }
 
 impl Graphics {
-    pub fn new(
-        rl: &mut RaylibHandle,
-        rlt: &RaylibThread,
-        sprite_assets_folder: &str,
-    ) -> Result<Self, String> {
-        let sprites = load_sprites(sprite_assets_folder)?;
-        let sprite_textures = load_sprite_textures(rl, rlt, sprite_assets_folder)?;
+    pub fn new(rl: &mut RaylibHandle, rlt: &RaylibThread) -> Result<Self, String> {
+        let sprite_textures = load_sprite_textures(rl, rlt, SPRITE_ASSETS_FOLDER)?;
 
+        // --- Window and Resolution Setup ---
+        // The window_dims is the actual OS window size.
         let window_dims = UVec2::new(1280, 720);
-        let dims = UVec2::new(1280, 720);
-        // let window_dims = UVec2::new(1920, 1080);
         let fullscreen = false;
 
-        // let dims = UVec2::new(800, 600);
-        // let dims = UVec2::new(480, 272); //psp
-        // let dims = UVec2::new(240, 160); // gba
-        // let dims = UVec2::new(128, 128);
-        // let dims = UVec2::new(1920, 1080);
-
-        let mut shaders = vec![];
-
-        // LOAD SHADERS
-        let texture_names = vec!["grayscale.fs"];
-        for name in texture_names {
-            let path = format!("src/shaders/{}", name);
-            match rl.load_shader(&rlt, None, Some(&path)) {
-                Ok(shader) => shaders.push(shader),
-                Err(e) => {
-                    println!("Error loading shader: {}", e);
-                    std::process::exit(1);
-                }
-            };
-        }
+        // The internal rendering resolution (`dims`). You can set this to a lower
+        // value for a retro pixel-art aesthetic. The result is then scaled up to the window size.
+        let dims = UVec2::new(1280, 720);
+        // let dims = UVec2::new(1920, 1080); // 1080p
+        // let dims = UVec2::new(640, 360);   // nHD
+        // let dims = UVec2::new(480, 272);   // Sony PSP
+        // let dims = UVec2::new(240, 160);   // Nintendo GBA
 
         rl.set_window_size(window_dims.x as i32, window_dims.y as i32);
-        // fullscreen
         if fullscreen {
             rl.toggle_fullscreen();
-            rl.set_window_size(rl.get_screen_width(), rl.get_screen_height());
+            // In fullscreen, you might want the window dims to match the monitor
         }
 
-        // after resetting the window size, we should recenter it or its gonna be in a weird gameplace on the screen
+        // Center the window on the primary monitor.
         let current_monitor = get_current_monitor();
         let monitor_width = get_monitor_width(current_monitor);
         let monitor_height = get_monitor_height(current_monitor);
-        let screen_dims = UVec2::new(monitor_width as u32, monitor_height as u32);
-        let screen_center = screen_dims / 2;
-        let window_center = window_dims / 2;
-
-        // print screen dims, screen center, window center
-        // let offset = screen_center - window_center;
-        // on linux the virtual screen resolution causes this to be wrong, so for development we can set a manual offset
-        let offset = UVec2::new(screen_center.x - window_center.x, 600);
-        rl.set_window_position(offset.x as i32, offset.y as i32);
+        let offset_x = (monitor_width / 2) - (window_dims.x as i32 / 2);
+        let offset_y = (monitor_height / 2) - (window_dims.y as i32 / 2);
+        rl.set_window_position(offset_x, offset_y);
         rl.set_target_fps(144);
 
-        let mouse_scale = dims / window_dims;
-        rl.set_mouse_scale(mouse_scale.x as f32, mouse_scale.y as f32);
-
-        // let frame_buffer = match rl.load_render_texture(rlt, dims.x, dims.y) {
-        //     Ok(rt) => rt,
-        //     Err(e) => {
-        //         println!("Error loading render texture: {}", e);
-        //         std::process::exit(1);
-        //     }
-        // };
-
-        // LOAD LARGE TEXTURES
-        let texture_error = "Error loading texture";
-        let mut textures = Vec::new();
-        let texture_names = vec!["title", "title_layer_1", "title_layer_2", "title_layer_3"];
-        for name in texture_names {
-            let path = format!("assets/graphics/images/{}.png", name);
-            let texture = rl.load_texture(rlt, &path).expect(texture_error);
-            textures.push(texture);
+        // --- Shader Loading ---
+        let mut shaders = Vec::new();
+        let shader_names = vec!["grayscale.fs"]; // Add any other shader files here
+        for name in shader_names {
+            // This line calls the helper and uses `?` to get the `Shader` out of the `Result`.
+            // If loading fails, the `?` will make the whole `Graphics::new` function return the error.
+            shaders.push(load_shader(rl, rlt, name)?);
         }
 
-        // LOAD TILE TEXTURES FOR STAGES
-        let texture_error = "Error loading tile set texture";
-        let mut tile_sets = Vec::new();
-        let tile_set_names = vec!["cave", "ice", "jungle", "temple", "boss"];
-        for name in tile_set_names {
-            let path = format!("assets/graphics/tiles/{}.png", name);
-            let texture = rl.load_texture(rlt, &path).expect(texture_error);
-            tile_sets.push(texture);
-        }
-
-        // LOAD SPECIAL_EFFECTS_ TEXTURE
-        let texture_error = "Error loading special effects texture";
-        let path = "assets/graphics/special_effects/special_effects.png";
-        let special_effects_texture = rl.load_texture(rlt, &path).expect(texture_error);
-
-        let screen_center = (window_dims / 2).as_vec2();
+        // --- Camera Setup ---
         let camera = Camera2D {
-            target: raylib::math::Vector2::new(0.0, 0.0), // doesnt matter because were gonna move this every frame
-            offset: raylib::math::Vector2::new(screen_center.x, screen_center.y), // makes what camera targets in the middle of the screen
+            target: raylib::math::Vector2::new(0.0, 0.0),
+            offset: raylib::math::Vector2::new((dims.x / 2) as f32, (dims.y / 2) as f32),
             rotation: 0.0,
-            zoom: 3.0,
+            zoom: 1.0, // Start with 1.0 zoom and adjust based on dims
         };
 
         Ok(Self {
             window_dims,
             dims,
-            fullscreen, //TODO: make this load from a file lol
+            fullscreen,
             camera,
-            play_cam: PlayCam {
-                pos: Vec2::ZERO,
-                vel: Vec2::ZERO,
-                acc: Vec2::ZERO,
-            },
-            sprites,
+            play_cam: PlayCam { pos: Vec2::ZERO },
             sprite_textures,
-            textures,
             shaders,
         })
     }
 
-    pub fn reload_sprite_data_and_textures(
-        &mut self,
-        rl: &mut RaylibHandle,
-        thread: &RaylibThread,
-        asset_folder: &str,
-    ) -> Result<(), String> {
-        self.sprites = load_sprites(asset_folder)?;
-        // The old textures will be automatically unloaded when replaced
-        self.textures = load_sprite_textures(rl, thread, asset_folder)?;
-        Ok(())
-    }
-
-    pub fn get_sprite_texture(&self, sprite: Sprite) -> &Texture2D {
-        &self.sprite_textures[sprite as usize]
-    }
-
-    pub fn get_sprite_data(&self, sprite: Sprite) -> &SpriteData {
-        &self.sprites[sprite as usize]
-    }
-
-    pub fn screen_to_wc(&self, screen_pos: UVec2) -> Vec2 {
-        let screen_pos = screen_pos.as_vec2();
-        let screen_center = self.window_dims.as_vec2() / 2.0;
-        let screen_pos = screen_pos - screen_center;
-        let screen_pos = screen_pos / self.camera.zoom;
-        let screen_pos = screen_pos + Vec2::new(self.camera.target.x, self.camera.target.y);
-        screen_pos
-    }
-
-    pub fn screen_to_tile_coords(&self, screen_pos: UVec2) -> IVec2 {
-        let wc = self.screen_to_wc(screen_pos);
-        let tile_pos = wc.as_ivec2() / Tile::SIZE as i32;
-        tile_pos
+    /// Safely gets a reference to a loaded sprite texture from the HashMap.
+    pub fn get_sprite_texture(&self, sprite: Sprite) -> Option<&Texture2D> {
+        self.sprite_textures.get(&sprite)
     }
 }
 
+/// Loads all textures defined in the `Sprite` enum into a HashMap.
 fn load_sprite_textures(
     rl: &mut RaylibHandle,
-    thread: &RaylibThread,
+    rlt: &RaylibThread,
     asset_folder: &str,
-) -> Result<Vec<Texture2D>, String> {
-    let mut textures = Vec::with_capacity(Sprite::COUNT);
+) -> Result<HashMap<Sprite, Texture2D>, String> {
+    let mut textures = HashMap::new();
+    println!("--- Loading Sprites from: '{}' ---", asset_folder);
+
     for sprite in Sprite::iter() {
-        let filename = sprite.to_filename();
+        if sprite == Sprite::NoSprite {
+            continue;
+        }
+
+        let filename: &'static str = sprite.into();
         let png_path = Path::new(asset_folder).join(format!("{}.png", filename));
+
         let texture = rl
-            .load_texture(thread, png_path.to_str().unwrap())
-            .map_err(|e| format!("Failed to load texture {}: {}", filename, e))?;
-        textures.push(texture);
+            .load_texture(rlt, png_path.to_str().unwrap())
+            .map_err(|e| {
+                format!(
+                    "Failed to load texture for {:?} (from {}): {}",
+                    sprite, filename, e
+                )
+            })?;
+
+        println!("- Loaded: {:?}", png_path);
+        textures.insert(sprite, texture);
     }
+    println!("--- {} sprites loaded successfully. ---", textures.len());
     Ok(textures)
 }
 
-pub enum TextType {
-    MenuTitle,
-    MenuItem,
-}
+/// Helper function to load a single shader from the `src/shaders` directory.
+/// Returns a Result containing the Shader or an error String.
+fn load_shader(
+    rl: &mut RaylibHandle,
+    rlt: &RaylibThread,
+    filename: &str,
+) -> Result<Shader, String> {
+    let path = format!("src/shaders/{}", filename);
 
-pub fn get_reasonable_font_scale(dims: UVec2, test_type: TextType) -> i32 {
-    match dims {
-        UVec2 { x: 160, y: 144 } => match test_type {
-            TextType::MenuTitle => 60 * dims.y as i32 / 720,
-            TextType::MenuItem => 40 * dims.y as i32 / 720,
-        },
-        _ => match test_type {
-            TextType::MenuTitle => 100 * dims.y as i32 / 720,
-            TextType::MenuItem => 60 * dims.y as i32 / 720,
-        },
+    // As per the raylib C API, load_shader returns a Shader object directly.
+    let shader = rl.load_shader(rlt, None, Some(&path));
+
+    // A shader is considered invalid if its ID is 0. We check this to determine
+    // if the load was successful and then construct our own Result.
+    if shader.id > 0 {
+        println!("- Loaded Shader: {}", path);
+        Ok(shader)
+    } else {
+        Err(format!("Failed to load shader from path: '{}'", path))
     }
 }

@@ -25,7 +25,7 @@ impl EntityManager {
             new_entity.vid.id = i;
             entities.push(new_entity);
             // available_ids.push(i as u32);
-            available_ids.insert(0, i as usize);
+            available_ids.insert(0, i);
         }
         Self {
             entities,
@@ -35,9 +35,9 @@ impl EntityManager {
 
     pub fn new_entity(&mut self) -> Option<VID> {
         if let Some(id) = self.available_ids.pop() {
-            self.entities[id as usize].active = true;
-            self.entities[id as usize].vid.version += 1;
-            return Some(self.entities[id as usize].vid.clone());
+            self.entities[id].active = true;
+            self.entities[id].vid.version += 1;
+            return Some(self.entities[id].vid);
         }
         // TODO: actual warning queue needed
         println!("Entity budget bounce!");
@@ -50,7 +50,7 @@ impl EntityManager {
     }
 
     pub fn set_inactive_vid(&mut self, vid: VID) {
-        let entity = &self.entities[vid.id as usize];
+        let entity = &self.entities[vid.id];
         if vid.version == entity.vid.version && entity.active {
             self.set_inactive(vid.id);
         }
@@ -63,7 +63,7 @@ impl EntityManager {
 
     /** dude just get the vid from the entity, wtf are you doing */
     pub fn get_vid(&self, id: usize) -> VID {
-        self.entities[id].vid.clone()
+        self.entities[id].vid
     }
 
     pub fn get_entity_by_id(&self, id: usize) -> &Entity {
@@ -71,7 +71,7 @@ impl EntityManager {
     }
 
     pub fn get_entity(&self, vid: VID) -> Option<&Entity> {
-        let entity = &self.entities[vid.id as usize];
+        let entity = &self.entities[vid.id];
         if vid.version == entity.vid.version && entity.active {
             return Some(entity);
         }
@@ -79,7 +79,7 @@ impl EntityManager {
     }
 
     pub fn get_entity_mut(&mut self, vid: VID) -> Option<&mut Entity> {
-        let entity = &mut self.entities[vid.id as usize];
+        let entity = &mut self.entities[vid.id];
         if entity.active && vid.version == entity.vid.version {
             return Some(entity);
         }
