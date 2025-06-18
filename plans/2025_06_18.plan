@@ -1,0 +1,19 @@
+make the zambies attack nearby attackables?
+zambies need atack cooldowns
+
+make zambies have directed movement of some sort?
+    maybe not all just some
+    dont pathfind, update a movement direction grid when the tilemap is modified, thats it. (ala they r bilions)
+
+player die when killed
+objective, money, upgrades etc. needs core gameplay loop
+player attack of some sort, bow, sword whatever
+
+bring in our particle effect code
+    obviously simplify it
+
+bring in some menuing for config
+bring in basic json for saving the config so its not redo ever time on load
+
+lose condition, win condition
+more than one stage?
