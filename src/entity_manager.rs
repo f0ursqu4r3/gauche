@@ -16,7 +16,7 @@ pub struct EntityManager {
 }
 
 impl EntityManager {
-    pub const MAX_NUM_ENTITIES: usize = 128;
+    pub const MAX_NUM_ENTITIES: usize = 1024; //128;
     pub fn new() -> Self {
         let mut entities = Vec::with_capacity(Self::MAX_NUM_ENTITIES);
         let mut available_ids = Vec::with_capacity(Self::MAX_NUM_ENTITIES);

@@ -1,11 +1,10 @@
-use glam::Vec2;
+use glam::IVec2;
 
 use crate::{
     entity::VID,
     entity_manager::EntityManager,
     inputs::{MenuInputDebounceTimers, MenuInputs, PlayingInputs},
     stage::Stage,
-    tile::Tile,
 };
 
 pub enum Mode {
@@ -44,6 +43,8 @@ pub struct State {
     // pub special_effects: Vec<Box<dyn SpecialEffect>>,
     pub stage: Stage,
 
+    pub spatial_grid: Vec<Vec<Vec<VID>>>,
+
     pub rebuild_render_texture: bool,
 }
 
@@ -75,7 +76,41 @@ impl State {
 
             stage: Stage::new(crate::stage::StageType::TestArena, 64, 64),
 
+            spatial_grid: vec![vec![vec![]; 64]; 64], // Adjust size as needed
             rebuild_render_texture: true,
+        }
+    }
+
+    /// Adds an entity's VID to the spatial grid at a given position.
+    pub fn add_entity_to_grid(&mut self, vid: VID, pos: IVec2) {
+        if let Some(column) = self.spatial_grid.get_mut(pos.x as usize) {
+            if let Some(cell) = column.get_mut(pos.y as usize) {
+                cell.push(vid);
+            }
+        }
+    }
+
+    /// Removes an entity's VID from the spatial grid at a given position.
+    pub fn remove_entity_from_grid(&mut self, vid: VID, pos: IVec2) {
+        if let Some(column) = self.spatial_grid.get_mut(pos.x as usize) {
+            if let Some(cell) = column.get_mut(pos.y as usize) {
+                cell.retain(|v| *v != vid);
+            }
+        }
+    }
+
+    /// Moves an entity's VID from an old position to a new one in the spatial grid.
+    pub fn move_entity_in_grid(&mut self, vid: VID, old_pos: IVec2, new_pos: IVec2) {
+        self.remove_entity_from_grid(vid, old_pos);
+        self.add_entity_to_grid(vid, new_pos);
+    }
+
+    /// Clears the spatial grid.
+    pub fn clear_spatial_grid(&mut self) {
+        for column in &mut self.spatial_grid {
+            for cell in column {
+                cell.clear();
+            }
         }
     }
 }

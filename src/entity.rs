@@ -108,8 +108,6 @@ pub struct Entity {
 }
 
 impl Entity {
-    pub const HANGHAND_SIZE: Vec2 = Vec2::new(1.0, 4.0);
-
     pub fn new() -> Self {
         Self {
             //  Basic

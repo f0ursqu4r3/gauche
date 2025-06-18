@@ -141,19 +141,15 @@ pub fn render_playing(
         for y in 0..state.stage.get_height() {
             for x in 0..state.stage.get_width() {
                 let tile_pixel_pos = Vector2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
-                let tile_color = if let Some(row) = state.stage.tiles.get(y) {
-                    if let Some(tile) = row.get(x) {
-                        match tile {
-                            crate::tile::Tile::None => Color::BLACK,
-                            crate::tile::Tile::Grass => Color::DARKGREEN,
-                            crate::tile::Tile::Wall => Color::DARKGRAY,
-                            crate::tile::Tile::Water => Color::DARKBLUE,
-                        }
-                    } else {
-                        Color::BLACK
+                let tile_color = if let Some(tile) = state.stage.get_tile(x, y) {
+                    match tile {
+                        crate::tile::Tile::None => Color::BLACK,
+                        crate::tile::Tile::Grass => Color::DARKGREEN,
+                        crate::tile::Tile::Wall => Color::DARKGRAY,
+                        crate::tile::Tile::Water => Color::DARKBLUE,
                     }
                 } else {
-                    Color::BLACK
+                    Color::BLACK // This case should ideally not be reached
                 };
                 d.draw_rectangle(
                     tile_pixel_pos.x as i32,
