@@ -1,7 +1,7 @@
 mod config;
 
 use config::Config;
-use raylib::prelude::*;
+use raylib::{consts::KeyboardKey, prelude::*};
 
 fn main() {
     // Load configuration from a TOML file
@@ -15,12 +15,12 @@ fn main() {
     // Initialize the game state
     let mut game = Game {
         world: World {
-            width: 100,
-            height: 100,
+            width: config.window.width / config.game.tile_size,
+            height: config.window.height / config.game.tile_size,
             tiles: vec![
-                (0..100)
+                (0..config.window.width / config.game.tile_size)
                     .flat_map(|x| {
-                        (0..100).map(move |y| Tile {
+                        (0..config.window.height / config.game.tile_size).map(move |y| Tile {
                             x,
                             y,
                             tile_type: TileType::Grass,
@@ -42,19 +42,19 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
 
         // Handle player input
-        if d.is_key_pressed(raylib::consts::KeyboardKey::KEY_W) {
+        if d.is_key_pressed(KeyboardKey::KEY_W) {
             game.player.y -= 1;
             game.player.y = game.player.y.clamp(0, game.world.height - 1);
         }
-        if d.is_key_pressed(raylib::consts::KeyboardKey::KEY_S) {
+        if d.is_key_pressed(KeyboardKey::KEY_S) {
             game.player.y += 1;
             game.player.y = game.player.y.clamp(0, game.world.height - 1);
         }
-        if d.is_key_pressed(raylib::consts::KeyboardKey::KEY_A) {
+        if d.is_key_pressed(KeyboardKey::KEY_A) {
             game.player.x -= 1;
             game.player.x = game.player.x.clamp(0, game.world.width - 1);
         }
-        if d.is_key_pressed(raylib::consts::KeyboardKey::KEY_D) {
+        if d.is_key_pressed(KeyboardKey::KEY_D) {
             game.player.x += 1;
             game.player.x = game.player.x.clamp(0, game.world.width - 1);
         }
@@ -67,6 +67,7 @@ fn main() {
                     TileType::Grass => Color::GREEN,
                     TileType::Water => Color::BLUE,
                     TileType::Mountain => Color::GRAY,
+                    TileType::Wall => Color::BLACK,
                 };
                 d.draw_rectangle(
                     tile.x * config.game.tile_size,
@@ -138,6 +139,7 @@ struct Tile {
 }
 enum TileType {
     Grass,
+    Wall,
     Water,
     Mountain,
 }
