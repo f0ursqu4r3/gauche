@@ -1,31 +1,37 @@
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
 pub struct Config {
-    pub window_title: String,
-    pub window_width: i32,
-    pub window_height: i32,
+    pub window: Window,
+    pub game: Game,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Window {
+    pub title: String,
+    pub width: i32,
+    pub height: i32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Game {
+    pub fps: i32,
+    pub tile_size: i32,
 }
 
 impl Config {
     pub fn load(file_path: &str) -> Result<Config, String> {
-        let content = std::fs::read_to_string(file_path)
+        // relative to src directory
+        let path = std::path::Path::new("client/src").join(file_path);
+        if !path.exists() {
+            return Err(format!("Config file not found: {}", path.display()));
+        }
+        let content = std::fs::read_to_string(path)
             .map_err(|e| format!("Failed to read config file: {}", e))?;
 
-        let config: toml::Value =
+        let config: Config =
             toml::from_str(&content).map_err(|e| format!("Failed to parse config file: {}", e))?;
 
-        Ok(Config {
-            window_title: config
-                .get("window_title")
-                .and_then(toml::Value::as_str)
-                .unwrap_or("Default Title")
-                .to_string(),
-            window_width: config
-                .get("window_width")
-                .and_then(toml::Value::as_integer)
-                .unwrap_or(800) as i32,
-            window_height: config
-                .get("window_height")
-                .and_then(toml::Value::as_integer)
-                .unwrap_or(600) as i32,
-        })
+        Ok(config)
     }
 }

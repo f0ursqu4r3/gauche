@@ -2,3 +2,7 @@
 title = "Hello, Raylib!"
 width = 800
 height = 600
+
+[game]
+fps = 60
+tile_size = 16
