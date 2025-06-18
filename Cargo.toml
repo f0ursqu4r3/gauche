@@ -9,3 +9,4 @@ toml = "0.8.23"
 serde = { version = "1.0.219", features = ["derive"] }
 strum = { version = "0.26.3", features = ["derive"] }
 strum_macros = "0.26.4"
+glam = "0.28.0"
