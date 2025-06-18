@@ -17,17 +17,15 @@ fn main() {
         world: World {
             width: config.window.width / config.game.tile_size,
             height: config.window.height / config.game.tile_size,
-            tiles: vec![
-                (0..config.window.width / config.game.tile_size)
-                    .flat_map(|x| {
-                        (0..config.window.height / config.game.tile_size).map(move |y| Tile {
-                            x,
-                            y,
-                            tile_type: TileType::Grass,
-                        })
+            tiles: vec![(0..config.window.width / config.game.tile_size)
+                .flat_map(|x| {
+                    (0..config.window.height / config.game.tile_size).map(move |y| Tile {
+                        x,
+                        y,
+                        tile_type: TileType::Grass,
                     })
-                    .collect::<Vec<_>>(),
-            ],
+                })
+                .collect::<Vec<_>>()],
         },
         player: Player {
             x: config.window.width / config.game.tile_size / 2,
