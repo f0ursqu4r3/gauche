@@ -22,7 +22,7 @@ pub struct Game {
 impl Config {
     pub fn load(file_path: &str) -> Result<Config, String> {
         // relative to src directory
-        let path = std::path::Path::new("client/src").join(file_path);
+        let path = std::path::Path::new("src").join(file_path);
         if !path.exists() {
             return Err(format!("Config file not found: {}", path.display()));
         }
