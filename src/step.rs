@@ -8,6 +8,7 @@ use crate::{
     audio::{Audio, Song, SoundEffect},
     graphics::Graphics,
     state::{Mode, State},
+    tile,
 };
 
 pub fn step(
@@ -87,8 +88,11 @@ fn step_playing(state: &mut State, _audio: &mut Audio, graphics: &mut Graphics) 
 
                 if moved {
                     let tile_coords = target_pos.as_ivec2();
-                    if let Some(tile) = state.world.tile_at(tile_coords.x, tile_coords.y) {
-                        if tile.walkable {
+                    if let Some(tile) = state
+                        .stage
+                        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+                    {
+                        if tile::walkable(*tile) {
                             player.pos = target_pos; // Update the entity's position.
                         }
                     }

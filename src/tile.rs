@@ -1,20 +1,11 @@
-use glam::Vec2;
-
 #[derive(Debug, Clone, Copy)]
-pub struct Tile {
-    pub pos: Vec2,
-    pub walkable: bool,
-    pub tile_type: TileType,
-}
-
-impl Tile {
-    pub const SIZE: i32 = 16;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum TileType {
+pub enum Tile {
+    None,
     Grass,
     Wall,
     Water,
-    Mountain,
+}
+
+pub fn walkable(tile: Tile) -> bool {
+    matches!(tile, Tile::None | Tile::Grass | Tile::Water)
 }

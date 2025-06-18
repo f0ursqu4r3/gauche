@@ -6,6 +6,7 @@ mod inputs;
 mod render;
 mod settings;
 mod sprite;
+mod stage;
 mod state;
 mod step;
 mod tile;
@@ -15,7 +16,6 @@ use render::render;
 use step::step;
 
 use crate::inputs::process_input;
-use crate::state::Mode;
 
 fn main() {
     ////////////////        GRAPHICS INIT        ////////////////

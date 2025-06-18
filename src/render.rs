@@ -134,20 +134,20 @@ pub fn render_playing(
         d.clear_background(Color::BLACK);
 
         // --- World Rendering ---
-        let world_width_pixels = state.world.width as f32 * TILE_SIZE;
-        let world_height_pixels = state.world.height as f32 * TILE_SIZE;
+        let world_width_pixels = state.stage.get_width() as f32 * TILE_SIZE;
+        let world_height_pixels = state.stage.get_height() as f32 * TILE_SIZE;
 
         // Draw Tiles and Grid
-        for y in 0..state.world.height {
-            for x in 0..state.world.width {
+        for y in 0..state.stage.get_height() {
+            for x in 0..state.stage.get_width() {
                 let tile_pixel_pos = Vector2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
-                let tile_color = if let Some(row) = state.world.tiles.get(y as usize) {
-                    if let Some(tile) = row.get(x as usize) {
-                        match tile.tile_type {
-                            crate::tile::TileType::Grass => Color::DARKGREEN,
-                            crate::tile::TileType::Wall => Color::DARKGRAY,
-                            crate::tile::TileType::Water => Color::DARKBLUE,
-                            crate::tile::TileType::Mountain => Color::BROWN,
+                let tile_color = if let Some(row) = state.stage.tiles.get(y) {
+                    if let Some(tile) = row.get(x) {
+                        match tile {
+                            crate::tile::Tile::None => Color::BLACK,
+                            crate::tile::Tile::Grass => Color::DARKGREEN,
+                            crate::tile::Tile::Wall => Color::DARKGRAY,
+                            crate::tile::Tile::Water => Color::DARKBLUE,
                         }
                     } else {
                         Color::BLACK

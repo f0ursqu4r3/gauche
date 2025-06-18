@@ -53,13 +53,8 @@ impl Graphics {
             // In fullscreen, you might want the window dims to match the monitor
         }
 
-        // Center the window on the primary monitor.
-        let current_monitor = get_current_monitor();
-        let monitor_width = get_monitor_width(current_monitor);
-        let monitor_height = get_monitor_height(current_monitor);
-        let offset_x = (monitor_width / 2) - (window_dims.x as i32 / 2);
-        let offset_y = (monitor_height / 2) - (window_dims.y as i32 / 2);
-        rl.set_window_position(offset_x, offset_y);
+        center_window(rl, window_dims.x as i32, window_dims.y as i32);
+
         rl.set_target_fps(144);
 
         // --- Shader Loading ---
@@ -94,6 +89,35 @@ impl Graphics {
     pub fn get_sprite_texture(&self, sprite: Sprite) -> Option<&Texture2D> {
         self.sprite_textures.get(&sprite)
     }
+}
+
+pub fn center_window(rl: &mut RaylibHandle, width: i32, height: i32) {
+    // Get the index of the monitor the window is currently on.
+    let monitor = get_current_monitor();
+
+    // Get the dimensions and position of that monitor.
+    let monitor_width = get_monitor_width(monitor);
+    let monitor_height = get_monitor_height(monitor);
+    let monitor_pos = get_monitor_position(monitor);
+
+    // Safely get the monitor's name by matching on the Result.
+    let monitor_name = match get_monitor_name(monitor) {
+        Ok(name) => name,
+        Err(_) => "N/A".to_string(),
+    };
+
+    // Print some useful monitor info for debugging.
+    println!(
+        "Centering on Monitor {}: '{}' ({}x{}) at ({}, {})",
+        monitor, monitor_name, monitor_width, monitor_height, monitor_pos.x, monitor_pos.y
+    );
+
+    // Calculate the top-left position for the window to be centered on the current monitor.
+    let x = monitor_pos.x as i32 + (monitor_width - width) / 2;
+    let y = monitor_pos.y as i32 + (monitor_height - height) / 2;
+
+    // Set the window's new position.
+    rl.set_window_position(x, y);
 }
 
 /// Loads all textures defined in the `Sprite` enum into a HashMap.

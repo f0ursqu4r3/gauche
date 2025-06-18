@@ -4,7 +4,8 @@ use crate::{
     entity::VID,
     entity_manager::EntityManager,
     inputs::{MenuInputDebounceTimers, MenuInputs, PlayingInputs},
-    tile::{Tile, TileType},
+    stage::Stage,
+    tile::Tile,
 };
 
 pub enum Mode {
@@ -14,10 +15,6 @@ pub enum Mode {
     Playing,
     GameOver,
     Win,
-}
-
-pub enum Stage {
-    TestArena,
 }
 
 pub struct State {
@@ -46,8 +43,6 @@ pub struct State {
     pub player_vid: Option<VID>,
     // pub special_effects: Vec<Box<dyn SpecialEffect>>,
     pub stage: Stage,
-
-    pub world: World,
 
     pub rebuild_render_texture: bool,
 }
@@ -78,52 +73,9 @@ impl State {
             entity_manager: EntityManager::new(),
             player_vid: None,
 
-            stage: Stage::TestArena,
-
-            world: World::new(64, 64),
+            stage: Stage::new(crate::stage::StageType::TestArena, 64, 64),
 
             rebuild_render_texture: true,
-        }
-    }
-}
-
-pub struct World {
-    pub width: i32,
-    pub height: i32,
-    pub tiles: Vec<Vec<Tile>>,
-}
-
-// constructor for world, 64 by 64 tiles
-impl World {
-    pub fn new(width: i32, height: i32) -> Self {
-        let tiles = vec![
-            vec![
-                Tile {
-                    pos: Vec2::ZERO,
-                    walkable: true,
-                    tile_type: TileType::Grass,
-                };
-                width as usize
-            ];
-            height as usize
-        ];
-
-        Self {
-            width,
-            height,
-            tiles,
-        }
-    }
-}
-
-impl World {
-    pub fn tile_at(&self, x: i32, y: i32) -> Option<&Tile> {
-        if x < 0 || y < 0 || x >= self.width || y >= self.height {
-            None
-        } else {
-            self.tiles
-                .get(x as usize)
-                .and_then(|row| row.get(y as usize))
         }
     }
 }

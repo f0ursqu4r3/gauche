@@ -5,6 +5,7 @@ use crate::{
     audio::Audio,
     graphics::Graphics,
     settings::KEY_DEBOUNCE_INTERVAL,
+    stage::init_playing_state,
     state::{Mode, State},
 };
 
@@ -192,6 +193,7 @@ pub fn process_input_title(
         )
     {
         state.mode = Mode::Playing;
+        init_playing_state(state);
     }
 }
 
