@@ -59,6 +59,7 @@ fn main() {
             game.player.x = game.player.x.clamp(0, game.world.width - 1);
         }
 
+        // Draw the game world
         d.clear_background(Color::new(30, 20, 30, 255));
         for row in &game.world.tiles {
             for tile in row {
@@ -76,6 +77,8 @@ fn main() {
                 );
             }
         }
+
+        // Draw player
         d.draw_rectangle(
             game.player.x * config.game.tile_size,
             game.player.y * config.game.tile_size,
