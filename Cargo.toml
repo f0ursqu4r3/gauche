@@ -10,3 +10,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
 glam = "0.30.4"
+rand = "0.9.1"

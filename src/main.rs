@@ -1,5 +1,7 @@
 mod audio;
 mod config;
+mod entity;
+mod sprite;
 mod state;
 
 use std::vec;
