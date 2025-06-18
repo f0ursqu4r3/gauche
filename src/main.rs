@@ -30,8 +30,8 @@ fn main() {
             ],
         },
         player: Player {
-            x: 0,
-            y: 0,
+            x: config.window.width / config.game.tile_size / 2,
+            y: config.window.height / config.game.tile_size / 2,
             health: 100,
             inventory: vec![],
         },
