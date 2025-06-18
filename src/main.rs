@@ -54,7 +54,7 @@ fn main() {
     let mut state = state::State::new();
     state.running = true;
     // DEBUG: this is temporary to auto jump into start
-    state.mode = Mode::Playing;
+    // state.mode = Mode::Playing;
     let mut render_texture = match rl.load_render_texture(&rlt, graphics.dims.x, graphics.dims.y) {
         Ok(rt) => rt,
         Err(e) => {
