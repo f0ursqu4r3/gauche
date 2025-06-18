@@ -66,9 +66,8 @@ fn main() {
             );
             if let Some(tile) = tile {
                 if tile.walkable {
-                    game.player.x = (game.player.x + move_player[0]).clamp(0, game.world.width - 1);
-                    game.player.y =
-                        (game.player.y + move_player[1]).clamp(0, game.world.height - 1);
+                    game.player.x = game.player.x + move_player[0];
+                    game.player.y = game.player.y + move_player[1];
                 }
             }
         }

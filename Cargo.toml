@@ -7,6 +7,6 @@ edition = "2021"
 raylib = "5.5.1"
 toml = "0.8.23"
 serde = { version = "1.0.219", features = ["derive"] }
-strum = { version = "0.26.3", features = ["derive"] }
-strum_macros = "0.26.4"
-glam = "0.28.0"
+strum = { version = "0.27.1", features = ["derive"] }
+strum_macros = "0.27.1"
+glam = "0.30.4"
