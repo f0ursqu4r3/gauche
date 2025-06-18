@@ -1,142 +1,95 @@
 mod audio;
 mod config;
 mod entity;
+mod entity_manager;
+mod graphics;
+mod inputs;
+mod render;
+mod settings;
 mod sprite;
 mod state;
+mod step;
+mod tile;
 
 use std::vec;
 
 use config::Config;
 use glam::Vec2;
+use raylib::{audio::RaylibAudio, ffi::SetTraceLogLevel, prelude::TraceLogLevel};
 use raylib::{consts::KeyboardKey, prelude::*};
-use state::{EntityType, Player, State, Tile, TileType, World};
+use render::render;
+use state::{EntityType, Player, State, World};
+use step::step;
+
+use crate::inputs::process_input;
 
 fn main() {
-    // Load configuration from a TOML file
-    let config = Config::load("config.toml").expect("Failed to load configuration");
-
-    let (mut rl, thread) = raylib::init()
-        .size(config.window.width, config.window.height)
-        .title(&config.window.title)
-        .build();
-
-    // Initialize the game state
-    let mut game = State {
-        world: World {
-            width: config.window.width / config.game.tile_size,
-            height: config.window.height / config.game.tile_size,
-            tiles: (0..config.window.width / config.game.tile_size)
-                .map(|x| {
-                    (0..config.window.height / config.game.tile_size)
-                        .map(move |y| Tile {
-                            pos: Vec2::new(x as f32, y as f32),
-                            walkable: true,
-                            tile_type: TileType::Grass,
-                        })
-                        .collect::<Vec<Tile>>()
-                })
-                .collect::<Vec<Vec<Tile>>>(),
-        },
-        player: Player {
-            pos: Vec2::new(
-                (config.window.width / config.game.tile_size / 2) as f32,
-                (config.window.height / config.game.tile_size / 2) as f32,
-            ),
-            health: 100,
-            inventory: vec![],
-        },
-        entities: vec![],
+    ////////////////        GRAPHICS INIT        ////////////////
+    let (mut rl, mut rlt) = raylib::init().title("Gauche").build();
+    unsafe {
+        SetTraceLogLevel(TraceLogLevel::LOG_WARNING as i32);
+    }
+    let sprite_assets_folder = "./assets/graphics/sprites";
+    let mut graphics = match graphics::Graphics::new(&mut rl, &rlt, &sprite_assets_folder) {
+        Ok(graphics) => graphics,
+        Err(e) => {
+            println!("Error initializing graphics: {}", e);
+            std::process::exit(1);
+        }
     };
 
-    while !rl.window_should_close() {
-        let mut d = rl.begin_drawing(&thread);
+    ////////////////        AUDIO INIT        ////////////////
+    let rl_audio_device = match RaylibAudio::init_audio_device() {
+        Ok(rl_audio_device) => rl_audio_device,
+        Err(e) => {
+            println!("Error initializing audio device: {}", e);
+            std::process::exit(1);
+        }
+    };
+    let songs = audio::load_songs(&rl_audio_device);
+    let sounds = audio::load_sounds(&rl_audio_device);
+    let mut audio = audio::Audio::new(songs, sounds);
+    // audio.play_song(Song::Title);
 
-        // Handle player input
-        let mut move_player = Vec2::new(0.0, 0.0);
-        if d.is_key_pressed(KeyboardKey::KEY_W) {
-            move_player.y -= 1.0;
+    ////////////////        MAIN LOOP        ////////////////
+    let mut state = state::State::new();
+    state.running = true;
+    // DEBUG: this is termporary to auto jump into start
+    // state.mode = Mode::Playing;
+    let mut render_texture = match rl.load_render_texture(&rlt, graphics.dims.x, graphics.dims.y) {
+        Ok(rt) => rt,
+        Err(e) => {
+            println!("Error creating render texture: {}", e);
+            std::process::exit(1);
         }
-        if d.is_key_pressed(KeyboardKey::KEY_S) {
-            move_player.y += 1.0;
-        }
-        if d.is_key_pressed(KeyboardKey::KEY_A) {
-            move_player.x -= 1.0;
-        }
-        if d.is_key_pressed(KeyboardKey::KEY_D) {
-            move_player.x += 1.0;
-        }
+    };
 
-        // Update player position
-        if move_player.x != 0.0 || move_player.y != 0.0 {
-            let new_pos = game.player.pos + move_player;
-            let tile = game.world.tile_at(new_pos.x as i32, new_pos.y as i32);
-            if let Some(tile) = tile {
-                if tile.walkable {
-                    game.player.pos += move_player;
-                } else {
-                    // Handle collision with non-walkable tiles
-                    println!("Can't walk here! {:?}", tile);
+    while state.running && !rl.window_should_close() {
+        // user may have changed internal res via video settings menu
+        if state.rebuild_render_texture {
+            render_texture = match rl.load_render_texture(&rlt, graphics.dims.x, graphics.dims.y) {
+                Ok(rt) => rt,
+                Err(e) => {
+                    println!("Error creating render texture: {}", e);
+                    std::process::exit(1);
                 }
-            }
-        }
-
-        // Draw the game world
-        d.clear_background(Color::new(30, 20, 30, 255));
-        for row in &game.world.tiles {
-            for tile in row {
-                let color = match tile.tile_type {
-                    TileType::Grass => Color::GREEN,
-                    TileType::Water => Color::BLUE,
-                    TileType::Mountain => Color::GRAY,
-                    TileType::Wall => Color::BLACK,
-                };
-                d.draw_rectangle(
-                    tile.pos.x as i32 * config.game.tile_size,
-                    tile.pos.y as i32 * config.game.tile_size,
-                    config.game.tile_size,
-                    config.game.tile_size,
-                    color,
-                );
-            }
-        }
-
-        // Draw player
-        d.draw_rectangle(
-            game.player.pos.x as i32 * config.game.tile_size,
-            game.player.pos.y as i32 * config.game.tile_size,
-            config.game.tile_size,
-            config.game.tile_size,
-            Color::WHITE,
-        );
-
-        // Draw entities
-        for entity in &game.entities {
-            let color = match entity.entity_type {
-                EntityType::Monster => Color::RED,
-                EntityType::Item => Color::YELLOW,
             };
-            d.draw_rectangle(
-                entity.pos.x as i32 * config.game.tile_size,
-                entity.pos.y as i32 * config.game.tile_size,
-                config.game.tile_size,
-                config.game.tile_size,
-                color,
-            );
+            state.rebuild_render_texture = false;
         }
 
-        d.draw_text(
-            &format!("Player Health: {}", game.player.health),
-            10,
-            10,
-            20,
-            Color::WHITE,
+        // primary game loop process
+        let dt = rl.get_frame_time();
+        process_input(&mut rl, &mut rlt, &mut state, &mut audio, &mut graphics, dt);
+        step(&mut rl, &mut rlt, &mut state, &mut audio, &mut graphics, dt);
+        render(
+            &mut rl,
+            &mut rlt,
+            &mut state,
+            &mut graphics,
+            &mut render_texture,
         );
-        d.draw_text(
-            &format!("Player Inventory: {}", game.player.inventory.len()),
-            10,
-            40,
-            20,
-            Color::WHITE,
-        );
+        audio.update_current_song_stream_data();
     }
+
+    while !rl.window_should_close() {}
 }

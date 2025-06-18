@@ -1,5 +1,10 @@
 use glam::Vec2;
 
+use crate::{
+    inputs::{MenuInputDebounceTimers, MenuInputs, PlayingInputs},
+    tile::{Tile, TileType},
+};
+
 pub enum Mode {
     Title,
     Settings,
@@ -11,22 +16,64 @@ pub enum Mode {
 
 pub struct State {
     pub mode: Mode,
+
+    pub menu_inputs: MenuInputs,
+    pub menu_input_debounce_timers: MenuInputDebounceTimers,
+    pub playing_inputs: PlayingInputs,
+
+    pub running: bool,
+    pub now: f64,
+    pub time_since_last_update: f32,
+    pub scene_frame: u32,
+    pub frame: u32,
+    pub stage_frame: u32,
+
+    pub game_over: bool,
+    pub pause: bool,
+    pub win: bool,
+
+    pub points: u32,
+    pub deaths: u32,
+    pub frame_pause: u32,
+
+    pub entity_manager: EntityManager,
+    // pub special_effects: Vec<Box<dyn SpecialEffect>>,
+    pub stage: Stage,
+
     pub world: World,
     pub player: Player,
     pub entities: Vec<Entity>,
+
+    pub rebuild_render_texture: bool,
 }
 
 impl State {
     pub fn new() -> Self {
         Self {
             mode: Mode::Title,
+
+            menu_inputs: MenuInputs::new(),
+            menu_input_debounce_timers: MenuInputDebounceTimers::new(),
+            playing_inputs: PlayingInputs::new(),
+
+            running: true,
+            now: 0.0,
+            time_since_last_update: 0.0,
+            scene_frame: 0,
+            frame: 0,
+            stage_frame: 0,
+            frame_pause: 0,
+
             world: World::new(64, 64),
             player: Player {
-                pos: Vec2::new(50.0, 50.0),
+                // center
+                pos: Vec2::new(32.0, 32.0),
                 health: 100,
                 inventory: vec![],
             },
             entities: vec![],
+
+            rebuild_render_texture: false,
         }
     }
 }
@@ -70,21 +117,6 @@ impl World {
                 .and_then(|row| row.get(y as usize))
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Tile {
-    pub pos: Vec2,
-    pub walkable: bool,
-    pub tile_type: TileType,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum TileType {
-    Grass,
-    Wall,
-    Water,
-    Mountain,
 }
 
 pub struct Player {
