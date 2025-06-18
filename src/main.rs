@@ -1,6 +1,8 @@
 mod audio;
 mod config;
 
+use std::vec;
+
 use config::Config;
 use raylib::{consts::KeyboardKey, prelude::*};
 
@@ -23,6 +25,7 @@ fn main() {
                     (0..config.window.height / config.game.tile_size).map(move |y| Tile {
                         x,
                         y,
+                        walkable: true,
                         tile_type: TileType::Grass,
                     })
                 })
@@ -41,21 +44,33 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
 
         // Handle player input
+        let mut move_player = vec![0, 0];
         if d.is_key_pressed(KeyboardKey::KEY_W) {
-            game.player.y -= 1;
-            game.player.y = game.player.y.clamp(0, game.world.height - 1);
+            move_player[1] -= 1;
         }
         if d.is_key_pressed(KeyboardKey::KEY_S) {
-            game.player.y += 1;
-            game.player.y = game.player.y.clamp(0, game.world.height - 1);
+            move_player[1] += 1;
         }
         if d.is_key_pressed(KeyboardKey::KEY_A) {
-            game.player.x -= 1;
-            game.player.x = game.player.x.clamp(0, game.world.width - 1);
+            move_player[0] -= 1;
         }
         if d.is_key_pressed(KeyboardKey::KEY_D) {
-            game.player.x += 1;
-            game.player.x = game.player.x.clamp(0, game.world.width - 1);
+            move_player[0] += 1;
+        }
+
+        // Update player position
+        if move_player[0] != 0 || move_player[1] != 0 {
+            let tile = game.world.tile_at(
+                game.player.x + move_player[0],
+                game.player.y + move_player[1],
+            );
+            if let Some(tile) = tile {
+                if tile.walkable {
+                    game.player.x = (game.player.x + move_player[0]).clamp(0, game.world.width - 1);
+                    game.player.y =
+                        (game.player.y + move_player[1]).clamp(0, game.world.height - 1);
+                }
+            }
         }
 
         // Draw the game world
@@ -131,9 +146,22 @@ struct World {
     tiles: Vec<Vec<Tile>>,
 }
 
+impl World {
+    fn tile_at(&self, x: i32, y: i32) -> Option<&Tile> {
+        if x < 0 || y < 0 || x >= self.width || y >= self.height {
+            None
+        } else {
+            self.tiles
+                .get(y as usize)
+                .and_then(|row| row.get(x as usize))
+        }
+    }
+}
+
 struct Tile {
     x: i32,
     y: i32,
+    walkable: bool,
     tile_type: TileType,
 }
 enum TileType {
