@@ -18,17 +18,20 @@ impl World {
             None
         } else {
             self.tiles
-                .get(y as usize)
-                .and_then(|row| row.get(x as usize))
+                .get(x as usize)
+                .and_then(|row| row.get(y as usize))
         }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Tile {
     pub pos: Vec2,
     pub walkable: bool,
     pub tile_type: TileType,
 }
+
+#[derive(Debug, Clone, Copy)]
 pub enum TileType {
     Grass,
     Wall,

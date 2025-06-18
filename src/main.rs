@@ -23,15 +23,17 @@ fn main() {
         world: World {
             width: config.window.width / config.game.tile_size,
             height: config.window.height / config.game.tile_size,
-            tiles: vec![(0..config.window.width / config.game.tile_size)
-                .flat_map(|x| {
-                    (0..config.window.height / config.game.tile_size).map(move |y| Tile {
-                        pos: Vec2::new(x as f32, y as f32),
-                        walkable: true,
-                        tile_type: TileType::Grass,
-                    })
+            tiles: (0..config.window.width / config.game.tile_size)
+                .map(|x| {
+                    (0..config.window.height / config.game.tile_size)
+                        .map(move |y| Tile {
+                            pos: Vec2::new(x as f32, y as f32),
+                            walkable: true,
+                            tile_type: TileType::Grass,
+                        })
+                        .collect::<Vec<Tile>>()
                 })
-                .collect::<Vec<_>>()],
+                .collect::<Vec<Vec<Tile>>>(),
         },
         player: Player {
             pos: Vec2::new(
@@ -69,6 +71,9 @@ fn main() {
             if let Some(tile) = tile {
                 if tile.walkable {
                     game.player.pos += move_player;
+                } else {
+                    // Handle collision with non-walkable tiles
+                    println!("Can't walk here! {:?}", tile);
                 }
             }
         }
