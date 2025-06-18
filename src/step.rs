@@ -85,10 +85,11 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
 
             if moved {
                 let target_grid_pos = target_pos.as_ivec2();
+                // Using map_or is slightly more compatible than is_some_and
                 let terrain_is_walkable = state
                     .stage
                     .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
-                    .map_or(false, |t| tile::walkable(*t));
+                    .is_some_and(|t| tile::walkable(*t));
                 let tile_is_unoccupied = !is_tile_occupied(state, target_grid_pos);
 
                 if terrain_is_walkable && tile_is_unoccupied {
@@ -97,7 +98,6 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                     player.pos = target_pos;
                     audio.play_sound_effect(SoundEffect::BallBounce1);
 
-                    // REFACTOR: Use the new, single-line interface for moving an entity.
                     state.move_entity_in_grid(player_vid, old_grid_pos, target_grid_pos);
                 }
 
@@ -157,31 +157,21 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
 
                 if moved {
                     let target_grid_pos = target_pos.as_ivec2();
+
+                    // --- REFACTORED AND FIXED ---
+                    // Use the same safe logic as the player
                     let terrain_is_walkable = state
                         .stage
                         .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
-                        .map_or(false, |t| tile::walkable(*t));
-                    let mut tile_is_unoccupied = true;
-                    if terrain_is_walkable {
-                        let entities_in_cell = &state.spatial_grid[target_grid_pos.x as usize]
-                            [target_grid_pos.y as usize];
-                        tile_is_unoccupied = !entities_in_cell.iter().any(|other_vid| {
-                            if *other_vid == vid {
-                                return false;
-                            }
-                            state
-                                .entity_manager
-                                .get_entity(*other_vid)
-                                .map_or(false, |e| e.impassable)
-                        });
-                    }
+                        .is_some_and(|t| tile::walkable(*t));
+                    let tile_is_unoccupied = !is_tile_occupied(state, target_grid_pos);
+                    // --- END OF REFACTOR ---
 
                     if terrain_is_walkable && tile_is_unoccupied {
                         let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
                         let old_grid_pos = zombie.pos.as_ivec2();
                         zombie.pos = target_pos;
 
-                        // REFACTOR: Use the new interface for zombies too.
                         state.move_entity_in_grid(vid, old_grid_pos, target_grid_pos);
                     }
                 }

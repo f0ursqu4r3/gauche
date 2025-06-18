@@ -13,6 +13,7 @@ pub const SPRITE_ASSETS_FOLDER: &str = "./assets/graphics/";
 
 pub struct PlayCam {
     pub pos: Vec2,
+    pub zoom: f32,
 }
 
 pub struct Graphics {
@@ -67,11 +68,12 @@ impl Graphics {
         }
 
         // --- Camera Setup ---
+        let initial_zoom = 2.0;
         let camera = Camera2D {
             target: raylib::math::Vector2::new(0.0, 0.0),
             offset: raylib::math::Vector2::new((dims.x / 2) as f32, (dims.y / 2) as f32),
             rotation: 0.0,
-            zoom: 1.0, // Start with 1.0 zoom and adjust based on dims
+            zoom: initial_zoom,
         };
 
         Ok(Self {
@@ -79,7 +81,10 @@ impl Graphics {
             dims,
             fullscreen,
             camera,
-            play_cam: PlayCam { pos: Vec2::ZERO },
+            play_cam: PlayCam {
+                pos: Vec2::ZERO,
+                zoom: initial_zoom,
+            },
             sprite_textures,
             shaders,
         })

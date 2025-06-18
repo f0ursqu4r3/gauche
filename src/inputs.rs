@@ -182,7 +182,7 @@ pub fn process_input_title(
     _rlt: &mut RaylibThread,
     state: &mut State,
     _audio: &mut Audio,
-    _graphics: &mut Graphics,
+    graphics: &mut Graphics,
     _dt: f32,
 ) {
     if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ENTER)
@@ -193,7 +193,7 @@ pub fn process_input_title(
         )
     {
         state.mode = Mode::Playing;
-        init_playing_state(state);
+        init_playing_state(state, graphics);
     }
 }
 
@@ -202,13 +202,37 @@ pub fn process_input_playing(
     _rlt: &mut RaylibThread,
     state: &mut State,
     _audio: &mut Audio,
-    _graphics: &mut Graphics,
+    graphics: &mut Graphics,
     _dt: f32,
 ) {
     if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ESCAPE)
         || rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_Q)
     {
         state.running = false;
+    }
+
+    // --- Camera Zoom Control (New!) ---
+    let wheel_move = rl.get_mouse_wheel_move();
+    if wheel_move != 0.0 {
+        // Define zoom speed and limits
+        const ZOOM_INCREMENT: f32 = 0.25;
+        const MIN_ZOOM: f32 = 0.5;
+        const MAX_ZOOM: f32 = 8.0;
+
+        // Adjust zoom based on wheel direction
+        graphics.play_cam.zoom += wheel_move * ZOOM_INCREMENT;
+
+        // Clamp the zoom to the defined limits
+        graphics.play_cam.zoom = graphics.play_cam.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
+    }
+
+    // also do for - and = bc they are - and +
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_MINUS) {
+        graphics.play_cam.zoom = (graphics.play_cam.zoom - 0.25).max(0.5);
+    }
+
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_EQUAL) {
+        graphics.play_cam.zoom = (graphics.play_cam.zoom + 0.25).min(8.0);
     }
 
     // Mouse

@@ -11,6 +11,8 @@ use crate::{
 };
 
 pub const TILE_SIZE: f32 = 16.0;
+pub const BACKGROUND_COLOR: Color = Color::new(10, 10, 10, 255);
+pub const PLAY_AREA_BACKGROUND_COLOR: Color = Color::new(20, 20, 20, 255);
 
 pub fn scale_and_blit_render_texture_to_window(
     draw_handle: &mut RaylibDrawHandle,
@@ -67,7 +69,7 @@ pub fn render(
         // We begin a texture mode, which redirects all subsequent drawing commands
         // to our off-screen render texture.
         let mut screen = draw_handle.begin_texture_mode(rlt, render_texture);
-        screen.clear_background(Color::BLACK);
+        screen.clear_background(BACKGROUND_COLOR);
 
         match state.mode {
             Mode::Title => render_title(state, graphics, &mut screen),
@@ -90,7 +92,7 @@ pub fn render_title(
     graphics: &mut Graphics,
     screen: &mut RaylibTextureMode<RaylibDrawHandle>,
 ) {
-    screen.clear_background(Color::new(38, 43, 68, 255));
+    screen.clear_background(BACKGROUND_COLOR);
 
     let title = "GAUCHE";
     let font_size = 80;
@@ -122,59 +124,85 @@ pub fn render_playing(
     screen: &mut RaylibTextureMode<RaylibDrawHandle>,
 ) {
     // --- Camera Setup ---
-    // FIX: Manually convert from glam::Vec2 to raylib::Vector2.
     graphics.camera.target = Vector2::new(graphics.play_cam.pos.x, graphics.play_cam.pos.y);
-
-    // FIX: Manually convert from glam::Vec2 to raylib::Vector2.
+    graphics.camera.zoom = graphics.play_cam.zoom;
     let offset_vec = graphics.dims.as_vec2() / 2.0;
     graphics.camera.offset = Vector2::new(offset_vec.x, offset_vec.y);
 
     {
         let mut d = screen.begin_mode2D(graphics.camera);
-        d.clear_background(Color::BLACK);
+        d.clear_background(BACKGROUND_COLOR);
 
         // --- World Rendering ---
         let world_width_pixels = state.stage.get_width() as f32 * TILE_SIZE;
         let world_height_pixels = state.stage.get_height() as f32 * TILE_SIZE;
 
+        // Draw a background for the play area
+        d.draw_rectangle(
+            0,
+            0,
+            world_width_pixels as i32,
+            world_height_pixels as i32,
+            PLAY_AREA_BACKGROUND_COLOR,
+        );
+
         // Draw Tiles and Grid
         for y in 0..state.stage.get_height() {
             for x in 0..state.stage.get_width() {
                 let tile_pixel_pos = Vector2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
-                let tile_color = if let Some(tile) = state.stage.get_tile(x, y) {
-                    match tile {
-                        crate::tile::Tile::None => Color::BLACK,
-                        crate::tile::Tile::Grass => Color::DARKGREEN,
-                        crate::tile::Tile::Wall => Color::DARKGRAY,
-                        crate::tile::Tile::Water => Color::DARKBLUE,
+
+                // --- NEW: Draw Tile Sprites ---
+                if let Some(tile) = state.stage.get_tile(x, y) {
+                    // Match the tile type to its corresponding sprite enum
+                    let maybe_sprite = match tile {
+                        crate::tile::Tile::Grass => Some(crate::sprite::Sprite::Grass),
+                        crate::tile::Tile::Wall => Some(crate::sprite::Sprite::Wall),
+                        crate::tile::Tile::Water => Some(crate::sprite::Sprite::Water),
+                        _ => None, // Tile::None has no sprite
+                    };
+
+                    // If a sprite is associated with the tile, draw it
+                    if let Some(sprite) = maybe_sprite {
+                        if let Some(texture) = graphics.get_sprite_texture(sprite) {
+                            d.draw_texture(
+                                texture,
+                                tile_pixel_pos.x as i32,
+                                tile_pixel_pos.y as i32,
+                                Color::WHITE,
+                            );
+                        }
+                    } else {
+                        // For Tile::None, draw a black square to ensure it's empty
+                        // d.draw_rectangle(
+                        //     tile_pixel_pos.x as i32,
+                        //     tile_pixel_pos.y as i32,
+                        //     TILE_SIZE as i32,
+                        //     TILE_SIZE as i32,
+                        //     Color::BLACK,
+                        // );
                     }
-                } else {
-                    Color::BLACK // This case should ideally not be reached
-                };
-                d.draw_rectangle(
-                    tile_pixel_pos.x as i32,
-                    tile_pixel_pos.y as i32,
-                    TILE_SIZE as i32,
-                    TILE_SIZE as i32,
-                    tile_color,
-                );
-                d.draw_rectangle_lines(
-                    tile_pixel_pos.x as i32,
-                    tile_pixel_pos.y as i32,
-                    TILE_SIZE as i32,
-                    TILE_SIZE as i32,
-                    Color::new(255, 255, 255, 30),
-                );
+                }
+                // --- End of new code ---
+
+                // We can keep the faint grid overlay for debugging purposes
+                // d.draw_rectangle_lines(
+                //     tile_pixel_pos.x as i32,
+                //     tile_pixel_pos.y as i32,
+                //     TILE_SIZE as i32,
+                //     TILE_SIZE as i32,
+                //     Color::new(255, 255, 255, 30),
+                // );
             }
         }
 
-        d.draw_rectangle_lines_ex(
-            Rectangle::new(0.0, 0.0, world_width_pixels, world_height_pixels),
-            2.0,
-            Color::YELLOW,
-        );
+        // d.draw_rectangle_lines_ex(
+        //     Rectangle::new(0.0, 0.0, world_width_pixels, world_height_pixels),
+        //     2.0,
+        //     Color::YELLOW,
+        // );
 
         // --- Entity Rendering ---
+        // (Entity rendering code remains unchanged)
         for entity in state.entity_manager.iter().filter(|e| e.active) {
             if let Some(texture) = graphics.get_sprite_texture(entity.sprite) {
                 let entity_pixel_pos = entity.pos * TILE_SIZE;
@@ -190,6 +218,7 @@ pub fn render_playing(
     }
 
     // --- UI / Debug Text Rendering ---
+    // (UI rendering code remains unchanged)
     let player_pos_text = if let Some(player_vid) = state.player_vid {
         if let Some(player) = state.entity_manager.get_entity(player_vid) {
             format!("Player Pos: ({:.2}, {:.2})", player.pos.x, player.pos.y)
@@ -200,7 +229,7 @@ pub fn render_playing(
         "Player: <NONE>".to_string()
     };
     screen.draw_text(&player_pos_text, 10, 10, 20, Color::WHITE);
-    let zoom_text = format!("Zoom: {:.2}x (+/-)", graphics.camera.zoom);
+    let zoom_text = format!("Zoom: {:.2}x (Mouse Wheel)", graphics.play_cam.zoom);
     screen.draw_text(&zoom_text, 10, 35, 20, Color::WHITE);
     let entity_count = state.entity_manager.num_active_entities();
     let entity_text = format!("Active Entities: {}", entity_count);
