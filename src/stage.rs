@@ -5,6 +5,7 @@ use rand::{random, random_range}; // <-- Import `random` for seeding
 use crate::{
     entity::EntityType,
     graphics::Graphics,
+    render::TILE_SIZE,
     sprite::Sprite,
     state::State,
     tile::{walkable, Tile},
@@ -28,11 +29,13 @@ impl Stage {
     pub fn get_tile(&self, x: usize, y: usize) -> Option<&Tile> {
         self.tiles.get(x).and_then(|row| row.get(y))
     }
+
     pub fn set_tile(&mut self, x: usize, y: usize, tile: Tile) {
         if x < self.tiles.len() && y < self.tiles[0].len() {
             self.tiles[x][y] = tile;
         }
     }
+
     pub fn clear(&mut self) {
         for row in &mut self.tiles {
             for tile in row {
@@ -54,6 +57,7 @@ impl Stage {
             self.tiles[0].len()
         }
     }
+
     pub fn get_width(&self) -> usize {
         self.tiles.len()
     }

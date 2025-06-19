@@ -149,6 +149,17 @@ pub fn render_playing(
         // Draw Tiles and Grid
         for y in 0..state.stage.get_height() {
             for x in 0..state.stage.get_width() {
+                d.draw_rectangle_lines_ex(
+                    Rectangle::new(
+                        x as f32 * TILE_SIZE,
+                        y as f32 * TILE_SIZE,
+                        TILE_SIZE,
+                        TILE_SIZE,
+                    ),
+                    1.0,
+                    Color::new(255, 255, 255, 2),
+                );
+
                 let tile_pixel_pos = Vector2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
 
                 // --- NEW: Draw Tile Sprites ---
@@ -221,7 +232,10 @@ pub fn render_playing(
     // (UI rendering code remains unchanged)
     let player_pos_text = if let Some(player_vid) = state.player_vid {
         if let Some(player) = state.entity_manager.get_entity(player_vid) {
-            format!("Player Pos: ({:.2}, {:.2})", player.pos.x, player.pos.y)
+            format!(
+                "Player Pos: ({:.2}, {:.2})",
+                player.pos.x as i32, player.pos.y as i32
+            )
         } else {
             "Player: <DEAD>".to_string()
         }
@@ -234,6 +248,12 @@ pub fn render_playing(
     let entity_count = state.entity_manager.num_active_entities();
     let entity_text = format!("Active Entities: {}", entity_count);
     screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
+    let mouse_position = format!(
+        "Mouse Pos: ({:.2}, {:.2})",
+        state.playing_inputs.mouse_pos.x / TILE_SIZE as u32,
+        state.playing_inputs.mouse_pos.y / TILE_SIZE as u32
+    );
+    screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
 }
 
 // --- Stub Functions ---

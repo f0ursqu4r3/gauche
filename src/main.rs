@@ -20,6 +20,7 @@ use crate::{audio::Song, inputs::process_input};
 fn main() {
     ////////////////        GRAPHICS INIT        ////////////////
     let (mut rl, mut rlt) = raylib::init().title("Gauche").build();
+    rl.set_exit_key(None);
     unsafe {
         SetTraceLogLevel(TraceLogLevel::LOG_WARNING as i32);
     }
@@ -89,6 +90,7 @@ fn main() {
         );
         audio.update_current_song_stream_data();
     }
-
-    while !rl.window_should_close() {}
+    ////////////////        CLEANUP        ////////////////
+    println!("Exiting Gauche. Thanks for playing!");
+    std::process::exit(0);
 }

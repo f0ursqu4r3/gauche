@@ -219,8 +219,10 @@ pub fn process_input_playing(
         const MIN_ZOOM: f32 = 0.5;
         const MAX_ZOOM: f32 = 8.0;
 
+        let wheel_direction = if wheel_move > 0.0 { 1.0 } else { -1.0 };
+
         // Adjust zoom based on wheel direction
-        graphics.play_cam.zoom += wheel_move * ZOOM_INCREMENT;
+        graphics.play_cam.zoom += wheel_direction * ZOOM_INCREMENT;
 
         // Clamp the zoom to the defined limits
         graphics.play_cam.zoom = graphics.play_cam.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
@@ -236,10 +238,9 @@ pub fn process_input_playing(
     }
 
     // Mouse
-    // let raw_mouse_pos = rl.get_mouse_position();
-    // let mouse_pos = UVec2::new(raw_mouse_pos.x as u32, raw_mouse_pos.y as u32);
-    // let mouse_wc = graphics.screen_to_wc(mouse_pos);
-    // let mouse_tc = graphics.screen_to_tile_coords(mouse_pos);
+    let raw_mouse_pos = rl.get_mouse_position();
+    let mouse_tc = graphics.screen_tc(Vec2::new(raw_mouse_pos.x as f32, raw_mouse_pos.y as f32));
+    state.playing_inputs.mouse_pos = UVec2::new(mouse_tc.x as u32, mouse_tc.y as u32);
     // println!("mouse pos {:?}", mouse_tc);
 }
 

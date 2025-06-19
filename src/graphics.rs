@@ -94,6 +94,30 @@ impl Graphics {
     pub fn get_sprite_texture(&self, sprite: Sprite) -> Option<&Texture2D> {
         self.sprite_textures.get(&sprite)
     }
+
+    pub fn screen_wc(&self, screen_pos: Vec2) -> Vec2 {
+        // Convert screen coordinates to world coordinates using the camera's zoom and offset.
+        let cam_offset = Vec2::new(self.camera.offset.x, self.camera.offset.y);
+        let zoomed_pos = (screen_pos - cam_offset) / self.camera.zoom;
+        let cam_target = Vec2::new(self.camera.target.x, self.camera.target.y);
+        zoomed_pos + cam_target
+    }
+
+    pub fn screen_tc(&self, screen_pos: Vec2) -> IVec2 {
+        // Convert screen coordinates to tile coordinates based on the internal rendering resolution.
+        let world_pos = self.screen_wc(screen_pos);
+        IVec2::new(
+            (world_pos.x / self.dims.x as f32 * self.dims.x as f32) as i32,
+            (world_pos.y / self.dims.y as f32 * self.dims.y as f32) as i32,
+        )
+    }
+
+    pub fn wc_screen(&self, world_pos: Vec2) -> Vec2 {
+        // Convert world coordinates to screen coordinates using the camera's zoom and offset.
+        let cam_target = Vec2::new(self.camera.target.x, self.camera.target.y);
+        let cam_offset = Vec2::new(self.camera.offset.x, self.camera.offset.y);
+        (world_pos - cam_target) * self.camera.zoom + cam_offset
+    }
 }
 
 pub fn center_window(rl: &mut RaylibHandle, width: i32, height: i32) {
