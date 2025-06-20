@@ -7,6 +7,7 @@ pub enum Tile {
     None,
     Grass,
     Wall,
+    Ruin,
     Water,
 }
 

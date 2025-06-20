@@ -9,6 +9,7 @@ use crate::{
     audio::{Audio, SoundEffect},
     entity::EntityType,
     graphics::Graphics,
+    render::TILE_SIZE,
     state::{Mode, State},
     tile::{self, is_tile_occupied},
 };
@@ -111,6 +112,36 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         graphics.play_cam.pos = graphics.play_cam.pos.lerp(target_cam_pos, 0.1);
     } else {
         state.mode = Mode::GameOver;
+    }
+
+    // --- Player Tile Logic ---
+    if let Some(player_vid) = state.player_vid {
+        let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
+        // check if place block input is pressed
+        if let Some(place_block) = state.playing_inputs.place_block {
+            let player_grid_pos = player.pos.as_ivec2();
+            let target_grid_pos =
+                graphics.screen_tc(Vec2::new(place_block.x as f32, place_block.y as f32));
+            // Check if the target position is adjacent to the player
+            let target_offset = target_grid_pos - player_grid_pos;
+            let target_offset_length_squared = target_offset.length_squared();
+            if target_offset_length_squared <= 2
+                && state
+                    .stage
+                    .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
+                    .is_some_and(|t| tile::walkable(*t))
+            {
+                // Check if the target tile is unoccupied
+                if !is_tile_occupied(state, target_grid_pos) {
+                    // Place a block at the target position
+                    state.stage.set_tile(
+                        target_grid_pos.x as usize,
+                        target_grid_pos.y as usize,
+                        tile::Tile::Wall, // or whatever tile you want to place
+                    );
+                }
+            }
+        }
     }
 
     // --- AI / Other Entity Logic ---

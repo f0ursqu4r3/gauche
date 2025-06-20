@@ -2,6 +2,7 @@
    responsible for holding all loaded graphical assets.
 */
 
+use crate::render::TILE_SIZE;
 use crate::sprite::Sprite;
 use glam::*;
 use raylib::prelude::*;
@@ -107,8 +108,8 @@ impl Graphics {
         // Convert screen coordinates to tile coordinates based on the internal rendering resolution.
         let world_pos = self.screen_wc(screen_pos);
         IVec2::new(
-            (world_pos.x / self.dims.x as f32 * self.dims.x as f32) as i32,
-            (world_pos.y / self.dims.y as f32 * self.dims.y as f32) as i32,
+            ((world_pos.x / self.dims.x as f32 * self.dims.x as f32) / TILE_SIZE) as i32,
+            ((world_pos.y / self.dims.y as f32 * self.dims.y as f32) / TILE_SIZE) as i32,
         )
     }
 

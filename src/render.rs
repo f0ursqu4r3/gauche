@@ -168,6 +168,7 @@ pub fn render_playing(
                     let maybe_sprite = match tile {
                         crate::tile::Tile::Grass => Some(crate::sprite::Sprite::Grass),
                         crate::tile::Tile::Wall => Some(crate::sprite::Sprite::Wall),
+                        crate::tile::Tile::Ruin => Some(crate::sprite::Sprite::Ruin),
                         crate::tile::Tile::Water => Some(crate::sprite::Sprite::Water),
                         _ => None, // Tile::None has no sprite
                     };
@@ -250,8 +251,7 @@ pub fn render_playing(
     screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
     let mouse_position = format!(
         "Mouse Pos: ({:.2}, {:.2})",
-        state.playing_inputs.mouse_pos.x / TILE_SIZE as u32,
-        state.playing_inputs.mouse_pos.y / TILE_SIZE as u32
+        state.playing_inputs.mouse_pos.x as u32, state.playing_inputs.mouse_pos.y as u32
     );
     screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
 }

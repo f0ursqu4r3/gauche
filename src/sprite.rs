@@ -15,6 +15,7 @@ pub enum Sprite {
     // Tile Sprites
     Grass,
     Wall,
+    Ruin,
     Water,
 
     // Enemy Sprites

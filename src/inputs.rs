@@ -67,6 +67,7 @@ pub struct PlayingInputs {
     pub down: bool,
 
     pub mouse_pos: UVec2,
+    pub place_block: Option<UVec2>,
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -77,6 +78,7 @@ impl PlayingInputs {
             down: false,
 
             mouse_pos: UVec2::new(0, 0),
+            place_block: None,
         }
     }
 }
@@ -242,6 +244,11 @@ pub fn process_input_playing(
     let mouse_tc = graphics.screen_tc(Vec2::new(raw_mouse_pos.x as f32, raw_mouse_pos.y as f32));
     state.playing_inputs.mouse_pos = UVec2::new(mouse_tc.x as u32, mouse_tc.y as u32);
     // println!("mouse pos {:?}", mouse_tc);
+
+    if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT) {
+        state.playing_inputs.place_block =
+            Some(UVec2::new(raw_mouse_pos.x as u32, raw_mouse_pos.y as u32));
+    }
 }
 
 ////////////////////////    INPUT DEBOUNCE TIMERS    ////////////////////////
