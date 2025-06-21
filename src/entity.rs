@@ -1,6 +1,12 @@
-use glam::Vec2;
+use glam::{IVec2, Vec2};
 
-use crate::sprite::Sprite;
+use crate::{
+    audio::Audio,
+    sprite::Sprite,
+    state::State,
+    step::entity_step_sound_lookup,
+    tile::{self, is_tile_occupied},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EntityType {
@@ -29,7 +35,7 @@ pub enum PointLabel {
 /** Use for entity state machine, for filtering attacks so they dont hit neutral enemies or only hit allys.*/
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Alignment {
-    Ally,
+    Player,
     Neutral,
     Enemy,
 }
@@ -71,6 +77,21 @@ pub struct VID {
     pub version: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum StepSound {
+    Step1,
+    Step2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Mood {
+    Idle,
+    Wander,
+    Noticing,
+    ChasingTarget,
+    LosingTarget,
+}
+
 #[derive(Debug)]
 pub struct Entity {
     //  Basic
@@ -87,6 +108,7 @@ pub struct Entity {
     pub acc: Vec2,
     pub size: Vec2,
     pub dist_traveled_this_frame: f32,
+    pub rot: f32,
 
     //  Rendering
     pub draw_layer: DrawLayer,
@@ -105,6 +127,12 @@ pub struct Entity {
 
     pub counter_a: f32,
     pub threshold_a: f32,
+    pub mood: Mood,
+    pub target_pos: Option<Vec2>,
+    pub target_entity: Option<VID>,
+
+    pub step_sound: StepSound,
+    pub detection_radius: f32,
 }
 
 impl Entity {
@@ -124,6 +152,7 @@ impl Entity {
             acc: Vec2::new(0.0, 0.0),
             size: Vec2::new(8.0, 8.0),
             dist_traveled_this_frame: 0.0,
+            rot: 0.0,
 
             // Rendering
             draw_layer: DrawLayer::Middle,
@@ -141,10 +170,16 @@ impl Entity {
 
             counter_a: 0.0,
             threshold_a: 0.0,
+            mood: Mood::Idle,
+            target_pos: None,
+
+            step_sound: StepSound::Step1,
+            target_entity: None,
+
+            detection_radius: 16.0, // Default detection radius
         }
     }
 
-    // TODO, try to get rid of reset...
     pub fn reset(&mut self) {
         let vid = self.vid;
         *self = Self::new();
@@ -152,11 +187,26 @@ impl Entity {
         self.active = true;
     }
 
-    pub fn get_tl_and_tr_corners(&self) -> (Vec2, Vec2) {
+    pub fn get_tl_and_br_corners(&self) -> (Vec2, Vec2) {
         // origin is always center
-        let half_width = self.size.x / 2.0;
-        let tl = Vec2::new(self.pos.x - half_width, self.pos.y - self.size.y / 2.0);
-        let tr = Vec2::new(self.pos.x + half_width, self.pos.y - self.size.y / 2.0);
-        (tl, tr)
+        let half_size = self.size / 2.0;
+        let top_left = Vec2::new(self.pos.x - half_size.x, self.pos.y - half_size.y);
+        let bottom_right = Vec2::new(self.pos.x + half_size.x, self.pos.y + half_size.y);
+        (top_left, bottom_right)
     }
+}
+
+pub fn swap_step_sound(entity: &mut Entity) {
+    entity.step_sound = match entity.step_sound {
+        StepSound::Step1 => StepSound::Step2,
+        StepSound::Step2 => StepSound::Step1,
+    };
+}
+
+pub fn randomize_step_sound(entity: &mut Entity) {
+    entity.step_sound = if rand::random::<bool>() {
+        StepSound::Step1
+    } else {
+        StepSound::Step2
+    };
 }

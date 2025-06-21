@@ -7,7 +7,11 @@ pub const TIMESTEP: f32 = 1.0 / FRAMES_PER_SECOND as f32;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::EntityType,
+    entity::{Entity, EntityType, StepSound},
+    entity_behavior::{
+        move_entity_on_grid, pick_random_adjacent_tile_position_include_center, ready_to_move,
+        reset_move_cooldown,
+    },
     graphics::Graphics,
     render::TILE_SIZE,
     state::{Mode, State},
@@ -53,66 +57,49 @@ fn step_title(state: &mut State, _audio: &mut Audio) {
 
 /// Handles tile-based gameplay logic by operating on entities.
 fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
-    // --- Player Control Logic ---
-    if let Some(player_vid) = state.player_vid {
-        let can_move;
-        let player_pos;
-        {
-            let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
-            if player.move_cooldown > 0.0 {
-                player.move_cooldown -= TIMESTEP;
-            }
-            can_move = player.move_cooldown <= 0.0;
-            player_pos = player.pos;
-        }
-
-        if can_move {
-            let mut target_pos = player_pos;
-            let mut moved = false;
-            if state.playing_inputs.left {
-                target_pos.x -= 1.0;
-                moved = true;
-            }
-            // ... (other inputs) ...
-            else if state.playing_inputs.right {
-                target_pos.x += 1.0;
-                moved = true;
-            } else if state.playing_inputs.up {
-                target_pos.y -= 1.0;
-                moved = true;
-            } else if state.playing_inputs.down {
-                target_pos.y += 1.0;
-                moved = true;
-            }
-
-            if moved {
-                let target_grid_pos = target_pos.as_ivec2();
-                // Using map_or is slightly more compatible than is_some_and
-                let terrain_is_walkable = state
-                    .stage
-                    .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
-                    .is_some_and(|t| tile::walkable(*t));
-                let tile_is_unoccupied = !is_tile_occupied(state, target_grid_pos);
-
-                if terrain_is_walkable && tile_is_unoccupied {
-                    let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
-                    let old_grid_pos = player.pos.as_ivec2();
-                    player.pos = target_pos;
-                    audio.play_sound_effect(SoundEffect::BallBounce1);
-
-                    state.move_entity_in_grid(player_vid, old_grid_pos, target_grid_pos);
-                }
-
-                let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
-                const MOVE_COOLDOWN_TIME: f32 = 0.12;
-                player.move_cooldown = MOVE_COOLDOWN_TIME;
-            }
-        }
-
-        let target_cam_pos = state.entity_manager.get_entity(player_vid).unwrap().pos * 16.0;
-        graphics.play_cam.pos = graphics.play_cam.pos.lerp(target_cam_pos, 0.1);
-    } else {
+    // game over if no player
+    if state.player_vid.is_none() {
         state.mode = Mode::GameOver;
+        state.game_over = true;
+        return;
+    };
+
+    // Player
+    if let Some(player_vid) = state.player_vid {
+        if ready_to_move(state, player_vid) {
+            let player_tile_pos = state
+                .entity_manager
+                .get_entity(player_vid)
+                .unwrap()
+                .pos
+                .as_ivec2();
+
+            let wants_to_move_to = if state.playing_inputs.left {
+                player_tile_pos + IVec2::new(-1, 0)
+            } else if state.playing_inputs.right {
+                player_tile_pos + IVec2::new(1, 0)
+            } else if state.playing_inputs.up {
+                player_tile_pos + IVec2::new(0, -1)
+            } else if state.playing_inputs.down {
+                player_tile_pos + IVec2::new(0, 1)
+            } else {
+                player_tile_pos // No movement input
+            };
+
+            if wants_to_move_to != player_tile_pos {
+                move_entity_on_grid(
+                    state,
+                    audio,
+                    player_vid,
+                    wants_to_move_to,
+                    false, // Do not ignore tile collision for player
+                    false, // reset move cooldown
+                );
+            }
+        }
+
+        let target_cam_pos = state.entity_manager.get_entity(player_vid).unwrap().pos * TILE_SIZE;
+        graphics.play_cam.pos = graphics.play_cam.pos.lerp(target_cam_pos, 0.1);
     }
 
     // --- Player Tile Logic ---
@@ -159,65 +146,34 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         }
 
         if let Some(EntityType::Zombie) = state.entity_manager.get_entity(vid).map(|e| e.type_) {
-            let can_move;
-            let zombie_pos;
-            {
-                let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
-                if zombie.move_cooldown > 0.0 {
-                    zombie.move_cooldown -= TIMESTEP;
+            if ready_to_move(state, vid) {
+                let current_tile_pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
+                let wants_to_move_to =
+                    pick_random_adjacent_tile_position_include_center(current_tile_pos);
+                if wants_to_move_to != current_tile_pos {
+                    move_entity_on_grid(
+                        state,
+                        audio,
+                        vid,
+                        wants_to_move_to,
+                        false, // Do not ignore tile collision for zombies
+                        false, // reset move cooldown
+                    );
                 }
-                can_move = zombie.move_cooldown <= 0.0;
-                zombie_pos = zombie.pos;
-            }
-
-            if can_move {
-                let mut target_pos = zombie_pos;
-                let direction = random_range(0..5);
-                let moved = match direction {
-                    0 => {
-                        target_pos.x -= 1.0;
-                        true
-                    }
-                    1 => {
-                        target_pos.x += 1.0;
-                        true
-                    }
-                    2 => {
-                        target_pos.y -= 1.0;
-                        true
-                    }
-                    3 => {
-                        target_pos.y += 1.0;
-                        true
-                    }
-                    _ => false,
-                };
-
-                if moved {
-                    let target_grid_pos = target_pos.as_ivec2();
-
-                    // --- REFACTORED AND FIXED ---
-                    // Use the same safe logic as the player
-                    let terrain_is_walkable = state
-                        .stage
-                        .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
-                        .is_some_and(|t| tile::walkable(*t));
-                    let tile_is_unoccupied = !is_tile_occupied(state, target_grid_pos);
-                    // --- END OF REFACTOR ---
-
-                    if terrain_is_walkable && tile_is_unoccupied {
-                        let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
-                        let old_grid_pos = zombie.pos.as_ivec2();
-                        zombie.pos = target_pos;
-
-                        state.move_entity_in_grid(vid, old_grid_pos, target_grid_pos);
-                    }
-                }
-
-                let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
-                const ZOMBIE_MOVE_COOLDOWN: f32 = 0.8;
-                zombie.move_cooldown = ZOMBIE_MOVE_COOLDOWN;
-            }
+            };
         }
+    }
+}
+
+/// Sets entity rotation from -15 to 15 degrees randomly
+pub fn lean_entity(entity: &mut Entity) {
+    entity.rot = random_range(-15.0..=15.0);
+}
+
+pub fn entity_step_sound_lookup(entity: &Entity) -> SoundEffect {
+    // TODO: different step sounds based on entity type or state
+    match entity.step_sound {
+        StepSound::Step1 => SoundEffect::Step1,
+        StepSound::Step2 => SoundEffect::Step2,
     }
 }

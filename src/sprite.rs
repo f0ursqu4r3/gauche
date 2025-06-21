@@ -7,6 +7,7 @@ use strum::{EnumCount, EnumIter, IntoStaticStr}; // Add IntoStaticStr here
 pub enum Sprite {
     NoSprite,
     Reticle,
+    Arrow,
 
     // Player Sprites
     Player,
@@ -20,4 +21,6 @@ pub enum Sprite {
 
     // Enemy Sprites
     Zombie,
+    ZombieAngry,
+    ZombieScratch1,
 }

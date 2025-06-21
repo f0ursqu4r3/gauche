@@ -113,4 +113,29 @@ impl State {
             }
         }
     }
+
+    /// Get all vids in rectangle defined by top-left and bottom-right corners.
+    pub fn get_vids_in_rect(&self, top_left: IVec2, bottom_right: IVec2) -> Vec<VID> {
+        let mut vids = Vec::new();
+        for x in top_left.x..bottom_right.x {
+            for y in top_left.y..bottom_right.y {
+                if let Some(cell) = self
+                    .spatial_grid
+                    .get(x as usize)
+                    .and_then(|col| col.get(y as usize))
+                {
+                    vids.extend_from_slice(cell);
+                }
+            }
+        }
+        vids
+    }
+
+    /// Get all vids in a rectangle defined by a center position and size.
+    pub fn get_vids_in_rect_centered(&self, center: IVec2, size: IVec2) -> Vec<VID> {
+        let half_size = size / 2;
+        let top_left = center - half_size;
+        let bottom_right = center + half_size;
+        self.get_vids_in_rect(top_left, bottom_right)
+    }
 }

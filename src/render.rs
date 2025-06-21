@@ -3,9 +3,11 @@
    Fiddly render logic should probably be elsewhere, since i expect a few different modes.
 */
 
+use glam::Vec2;
 use raylib::prelude::*;
 
 use crate::{
+    entity::EntityType,
     graphics::Graphics,
     state::{Mode, State},
 };
@@ -117,6 +119,34 @@ pub fn render_title(
     );
 }
 
+/// get alpha based on player view distance and position
+/// so if player is at (0, 0) and view distance is 5, at 5 alpha will be 0, and next to player it will be 255
+/// used for both tiles and player, so lets just have it take in two positions, root, and target
+pub fn get_alpha_from_distance(root: Vec2, target: Vec2, view_distance: f32) -> u8 {
+    let distance = (target - root).length();
+    if distance >= view_distance {
+        0 // Fully transparent
+    } else {
+        // Calculate alpha based on distance
+        let alpha = ((1.0 - (distance / view_distance)) * 255.0) as u8;
+        alpha.clamp(0, 255) // Ensure alpha is within valid range
+    }
+}
+
+pub const VIEW_DISTANCE: f32 = 16.0 * TILE_SIZE;
+/// wrapper for above that takes in state, and target
+pub fn get_alpha_from_state(state: &State, target: Vec2) -> u8 {
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            get_alpha_from_distance(player.pos * TILE_SIZE, target, VIEW_DISTANCE)
+        } else {
+            0 // Player not found, return fully transparent
+        }
+    } else {
+        0 // No player, return fully transparent
+    }
+}
+
 /// Renders the main gameplay view.
 pub fn render_playing(
     state: &mut State,
@@ -146,85 +176,89 @@ pub fn render_playing(
             PLAY_AREA_BACKGROUND_COLOR,
         );
 
-        // Draw Tiles and Grid
+        // Get player position once to avoid re-fetching in the loop
+        let player_pos_pixels = if let Some(player_vid) = state.player_vid {
+            state
+                .entity_manager
+                .get_entity(player_vid)
+                .map(|e| e.pos * TILE_SIZE)
+        } else {
+            None
+        };
+
+        // --- Draw Tiles ---
         for y in 0..state.stage.get_height() {
             for x in 0..state.stage.get_width() {
-                d.draw_rectangle_lines_ex(
-                    Rectangle::new(
-                        x as f32 * TILE_SIZE,
-                        y as f32 * TILE_SIZE,
-                        TILE_SIZE,
-                        TILE_SIZE,
-                    ),
-                    1.0,
-                    Color::new(255, 255, 255, 2),
-                );
+                let tile_pixel_pos = Vec2::new(x as f32, y as f32) * TILE_SIZE;
 
-                let tile_pixel_pos = Vector2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
-
-                // --- NEW: Draw Tile Sprites ---
                 if let Some(tile) = state.stage.get_tile(x, y) {
-                    // Match the tile type to its corresponding sprite enum
                     let maybe_sprite = match tile {
                         crate::tile::Tile::Grass => Some(crate::sprite::Sprite::Grass),
                         crate::tile::Tile::Wall => Some(crate::sprite::Sprite::Wall),
                         crate::tile::Tile::Ruin => Some(crate::sprite::Sprite::Ruin),
                         crate::tile::Tile::Water => Some(crate::sprite::Sprite::Water),
-                        _ => None, // Tile::None has no sprite
+                        _ => None,
                     };
 
-                    // If a sprite is associated with the tile, draw it
                     if let Some(sprite) = maybe_sprite {
                         if let Some(texture) = graphics.get_sprite_texture(sprite) {
-                            d.draw_texture(
-                                texture,
-                                tile_pixel_pos.x as i32,
-                                tile_pixel_pos.y as i32,
-                                Color::WHITE,
-                            );
+                            // Calculate alpha based on distance from player
+                            let alpha = if let Some(player_pos) = player_pos_pixels {
+                                get_alpha_from_distance(player_pos, tile_pixel_pos, VIEW_DISTANCE)
+                            } else {
+                                255 // If no player, everything is fully visible
+                            };
+
+                            // Only draw if it's visible at all
+                            if alpha > 0 {
+                                d.draw_texture(
+                                    texture,
+                                    tile_pixel_pos.x as i32,
+                                    tile_pixel_pos.y as i32,
+                                    Color::new(255, 255, 255, alpha),
+                                );
+                            }
                         }
-                    } else {
-                        // For Tile::None, draw a black square to ensure it's empty
-                        // d.draw_rectangle(
-                        //     tile_pixel_pos.x as i32,
-                        //     tile_pixel_pos.y as i32,
-                        //     TILE_SIZE as i32,
-                        //     TILE_SIZE as i32,
-                        //     Color::BLACK,
-                        // );
                     }
                 }
-                // --- End of new code ---
-
-                // We can keep the faint grid overlay for debugging purposes
-                // d.draw_rectangle_lines(
-                //     tile_pixel_pos.x as i32,
-                //     tile_pixel_pos.y as i32,
-                //     TILE_SIZE as i32,
-                //     TILE_SIZE as i32,
-                //     Color::new(255, 255, 255, 30),
-                // );
             }
         }
 
-        // d.draw_rectangle_lines_ex(
-        //     Rectangle::new(0.0, 0.0, world_width_pixels, world_height_pixels),
-        //     2.0,
-        //     Color::YELLOW,
-        // );
-
         // --- Entity Rendering ---
-        // (Entity rendering code remains unchanged)
         for entity in state.entity_manager.iter().filter(|e| e.active) {
-            if let Some(texture) = graphics.get_sprite_texture(entity.sprite) {
-                let entity_pixel_pos = entity.pos * TILE_SIZE;
-                let source_rec =
-                    Rectangle::new(0.0, 0.0, texture.width() as f32, texture.height() as f32);
-                let dest_rec =
-                    Rectangle::new(entity_pixel_pos.x, entity_pixel_pos.y, TILE_SIZE, TILE_SIZE);
-                let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
+            // Player is always fully visible
+            let alpha = if entity.type_ == EntityType::Player {
+                255
+            } else if let Some(player_pos) = player_pos_pixels {
+                // Other entities fade based on distance
+                get_alpha_from_distance(player_pos, entity.pos * TILE_SIZE, VIEW_DISTANCE)
+            } else {
+                255 // If no player, everything is fully visible
+            };
 
-                d.draw_texture_pro(texture, source_rec, dest_rec, origin, 0.0, Color::WHITE);
+            // Only draw if visible
+            if alpha > 0 {
+                if let Some(texture) = graphics.get_sprite_texture(entity.sprite) {
+                    let entity_pixel_pos = entity.pos * TILE_SIZE;
+                    let source_rec =
+                        Rectangle::new(0.0, 0.0, texture.width() as f32, texture.height() as f32);
+                    let dest_rec = Rectangle::new(
+                        entity_pixel_pos.x,
+                        entity_pixel_pos.y,
+                        TILE_SIZE,
+                        TILE_SIZE,
+                    );
+                    let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
+
+                    d.draw_texture_pro(
+                        texture,
+                        source_rec,
+                        dest_rec,
+                        origin,
+                        entity.rot,
+                        Color::new(255, 255, 255, alpha),
+                    );
+                }
             }
         }
     }
@@ -251,7 +285,8 @@ pub fn render_playing(
     screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
     let mouse_position = format!(
         "Mouse Pos: ({:.2}, {:.2})",
-        state.playing_inputs.mouse_pos.x as u32, state.playing_inputs.mouse_pos.y as u32
+        { state.playing_inputs.mouse_pos.x },
+        { state.playing_inputs.mouse_pos.y }
     );
     screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
 }

@@ -107,6 +107,18 @@ impl<'a> Audio<'a> {
         }
     }
 
+    /// Plays a sound effect with a volume scaled by the provided factor.
+    /// The final volume will be `master_sfx_volume * scale`.
+    /// The scale factor will be clamped between 0.0 and 1.0.
+    pub fn play_sound_effect_scaled(&mut self, sound_effect: SoundEffect, scale: f32) {
+        if let Some(sound) = self.sounds.get_mut(&sound_effect) {
+            // Calculate the final volume by multiplying the master sound effects volume by the scale factor.
+            let final_volume = self.sound_effects_volume * scale.clamp(0.0, 1.0);
+            sound.set_volume(final_volume);
+            sound.play();
+        }
+    }
+
     /// Sets the volume for all music tracks and updates the currently playing one.
     pub fn set_music_volume(&mut self, volume: f32) {
         self.music_volume = volume.clamp(0.0, 1.0);

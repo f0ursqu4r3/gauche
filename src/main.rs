@@ -1,5 +1,6 @@
 mod audio;
 mod entity;
+mod entity_behavior;
 mod entity_manager;
 mod graphics;
 mod inputs;
@@ -47,7 +48,7 @@ fn main() {
             std::process::exit(1);
         }
     };
-    audio.set_music_volume(1.0);
+    audio.set_music_volume(0.1);
     audio.set_sfx_volume(1.0);
     audio.play_song(Song::Title);
 

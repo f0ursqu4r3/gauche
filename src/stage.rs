@@ -1,9 +1,11 @@
+use std::fmt::Alignment;
+
 use glam::{IVec2, Vec2};
 use noise::{NoiseFn, Perlin, Seedable}; // <-- Add noise crate imports
 use rand::{random, random_range}; // <-- Import `random` for seeding
 
 use crate::{
-    entity::EntityType,
+    entity::{self, EntityType, Mood},
     graphics::Graphics,
     render::TILE_SIZE,
     sprite::Sprite,
@@ -120,6 +122,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
         player.type_ = EntityType::Player;
         player.sprite = Sprite::Player;
         player.impassable = true;
+        player.alignment = entity::Alignment::Player;
+        player.move_cooldown = 0.12;
 
         // Try to spawn player on a walkable tile near the center
         loop {
@@ -138,7 +142,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     state.add_entity_to_grid(player_vid, player_grid_pos);
 
     // --- Spawn Zombies ---
-    let num_zombies = 0;
+    let num_zombies = 100;
     for _ in 0..num_zombies {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
@@ -148,6 +152,13 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                 zombie.type_ = EntityType::Zombie;
                 zombie.sprite = Sprite::Zombie;
                 zombie.impassable = true;
+                zombie.alignment = entity::Alignment::Enemy;
+                zombie.mood = Mood::Wander;
+                zombie.move_cooldown = 0.8;
+                // randomize move cooldown timer in range
+                zombie.move_cooldown_countdown = random_range(0.0..zombie.move_cooldown);
+                // randomize step sound, 1 or 2
+                entity::randomize_step_sound(zombie);
 
                 loop {
                     let x = random_range(0..width);
