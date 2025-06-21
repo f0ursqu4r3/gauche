@@ -24,6 +24,7 @@ pub fn step(
 ) {
     state.time_since_last_update += rl.get_frame_time();
 
+    /* FYI: while loop makes step spin until catchup if we are behind some frames. This is on purpose*/
     while state.time_since_last_update > TIMESTEP {
         state.time_since_last_update -= TIMESTEP;
 
@@ -139,8 +140,14 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                         target_grid_pos.y as usize,
                         tile::Tile::Wall, // or whatever tile you want to place
                     );
+                    audio.play_sound_effect(SoundEffect::BlockLand);
                 }
+            } else {
+                // If the target position is not adjacent, play an error sound
+                audio.play_sound_effect(SoundEffect::HitBlock1);
             }
+
+            state.playing_inputs.place_block = None;
         }
     }
 

@@ -165,7 +165,7 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, _dt: f32) {
         );
     }
 
-    let mut new_inputs = PlayingInputs::new();
+    let mut new_inputs = state.playing_inputs;
     new_inputs.left = kb_left || gp_left;
     new_inputs.right = kb_right || gp_right;
     new_inputs.up = kb_up || gp_up;
@@ -241,7 +241,7 @@ pub fn process_input_playing(
 
     // Mouse
     let raw_mouse_pos = rl.get_mouse_position();
-    let mouse_tc = graphics.screen_tc(Vec2::new(raw_mouse_pos.x as f32, raw_mouse_pos.y as f32));
+    let mouse_tc = graphics.screen_tc(Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y));
     state.playing_inputs.mouse_pos = UVec2::new(mouse_tc.x as u32, mouse_tc.y as u32);
     // println!("mouse pos {:?}", mouse_tc);
 

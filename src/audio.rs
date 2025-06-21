@@ -34,6 +34,9 @@ pub enum SoundEffect {
     SmallLaser,
     SturdyBlockBouncedOn,
     SuperConfirm,
+    Step1,
+    Step2,
+    BlockLand,
 }
 
 /// The main struct for managing all game audio. It holds the loaded songs and sounds.
