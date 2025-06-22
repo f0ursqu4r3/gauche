@@ -172,15 +172,14 @@ pub fn move_entity_on_grid(
                 FEET_OFFSET // Right foot
             };
             let footprint_pos = Vec2::new(footprint_pos.x + offset_x, footprint_pos.y);
-            state.particles.spawn_static(ParticleData {
-                pos: footprint_pos,
-                size: Vec2::new(8.0, 8.0),
-                rot: random_range(-10.0..10.0),
-                alpha: 0.1,
-                lifetime: FRAMES_PER_SECOND * 32,
-                initial_lifetime: 60,
-                sprite: footprint_sprite,
-            });
+            state.particles.spawn_static(ParticleData::new(
+                footprint_pos,
+                Vec2::new(8.0, 8.0),
+                random_range(-10.0..10.0),
+                0.1, // alpha
+                60,  // lifetime
+                footprint_sprite,
+            ));
         }
     }
 

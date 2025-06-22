@@ -14,9 +14,27 @@ pub struct ParticleData {
     pub size: Vec2,
     pub rot: f32,
     pub alpha: f32,
+    pub initial_alpha: f32, // <-- ADD THIS FIELD to store the starting alpha
     pub lifetime: u32,
     pub initial_lifetime: u32, // Used for age-based calculations (e.g., animations)
     pub sprite: Sprite,
+}
+
+impl ParticleData {
+    /// A convenient constructor for creating particle data.
+    /// Automatically sets `initial_alpha` and `initial_lifetime` from the given values.
+    pub fn new(pos: Vec2, size: Vec2, rot: f32, alpha: f32, lifetime: u32, sprite: Sprite) -> Self {
+        Self {
+            pos,
+            size,
+            rot,
+            alpha,                      // This will be updated by the step function
+            initial_alpha: alpha,       // Set from the single `alpha` parameter
+            lifetime,                   // This will be updated by the step function
+            initial_lifetime: lifetime, // Set from the single `lifetime` parameter
+            sprite,
+        }
+    }
 }
 
 /// A particle that does not move.
@@ -91,34 +109,39 @@ impl Particles {
 
         for p in &mut self.static_particles {
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            // Example of alpha fade over time
-            // p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
+            let lifetime_ratio = p.data.lifetime as f32 / p.data.initial_lifetime as f32;
+            p.data.alpha = p.data.initial_alpha * lifetime_ratio;
         }
 
         for p in &mut self.dynamic_particles {
             p.data.pos += p.vel;
             p.data.rot += p.rot_vel;
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            // p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
+            let lifetime_ratio = p.data.lifetime as f32 / p.data.initial_lifetime as f32;
+            p.data.alpha = p.data.initial_alpha * lifetime_ratio;
         }
 
         for p in &mut self.accelerated_particles {
             p.vel += p.acc;
             p.data.pos += p.vel;
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            // p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
+            let lifetime_ratio = p.data.lifetime as f32 / p.data.initial_lifetime as f32;
+            p.data.alpha = p.data.initial_alpha * lifetime_ratio;
         }
 
         for p in &mut self.spline_particles {
             let age_ratio = 1.0 - (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
             p.data.pos = calculate_bezier_point(age_ratio, p.start_pos, p.control_point, p.end_pos);
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            // p.data.alpha = 1.0 - age_ratio; // Fade out
+            let lifetime_ratio = p.data.lifetime as f32 / p.data.initial_lifetime as f32;
+            p.data.alpha = p.data.initial_alpha * lifetime_ratio;
         }
 
         for p in &mut self.animated_particles {
             p.data.pos += p.vel;
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
+            let lifetime_ratio = p.data.lifetime as f32 / p.data.initial_lifetime as f32;
+            p.data.alpha = p.data.initial_alpha * lifetime_ratio;
 
             // Update sprite based on age
             let num_frames = p.animation_sprites.len();
