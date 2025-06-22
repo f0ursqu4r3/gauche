@@ -79,6 +79,7 @@ pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackType {
     ZombieScratch,
 }
@@ -86,6 +87,12 @@ pub enum AttackType {
 pub fn attack_sprite_lookup(attack_type: AttackType) -> Sprite {
     match attack_type {
         AttackType::ZombieScratch => Sprite::ZombieScratch1,
+    }
+}
+
+pub fn attack_sound_lookup(attack_type: AttackType) -> SoundEffect {
+    match attack_type {
+        AttackType::ZombieScratch => SoundEffect::ZombieScratch1, // Using scratch sound as attack sound
     }
 }
 
@@ -107,7 +114,7 @@ pub fn attack(
     // play sound effect based on attack type
     match attack_type {
         AttackType::ZombieScratch => {
-            audio.play_sound_effect(SoundEffect::ZombieGrowl2); // Using growl sound as attack sound
+            audio.play_sound_effect(attack_sound_lookup(attack_type));
         }
     }
 
@@ -124,7 +131,7 @@ pub fn attack(
             attacked_entity.health = 0;
         }
         // make them shake a little
-        attacked_entity.shake += 0.5; // Set shake to a moderate value for
+        attacked_entity.shake += 0.1; // Set shake to a moderate value for
 
         // lean attacker towards attackee at 45 degree angle if attacker is to left or right
         // if attacker is above, become 0 rot, if below, become 180 rot
@@ -164,8 +171,8 @@ pub fn attack(
     let sprite = attack_sprite_lookup(attack_type);
     state.particles.spawn_static(ParticleData::new(
         particle_pos,
-        Vec2::new(8.0, 8.0),
-        random_range(-10.0..10.0),
+        Vec2::new(32.0, 32.0),
+        random_range(-45.0..45.0),
         1.0,
         30,
         sprite,
