@@ -6,6 +6,7 @@ mod graphics;
 mod inputs;
 mod render;
 mod settings;
+mod special_effects;
 mod sprite;
 mod stage;
 mod state;
@@ -50,7 +51,7 @@ fn main() {
     };
     audio.set_music_volume(0.1);
     audio.set_sfx_volume(1.0);
-    audio.play_song(Song::Title);
+    // audio.play_song(Song::Title);
 
     ////////////////        MAIN LOOP        ////////////////
     let mut state = state::State::new();

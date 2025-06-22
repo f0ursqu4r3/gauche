@@ -4,6 +4,7 @@ use crate::{
     entity::VID,
     entity_manager::EntityManager,
     inputs::{MenuInputDebounceTimers, MenuInputs, PlayingInputs},
+    special_effects::special_effect::SpecialEffect,
     stage::Stage,
 };
 
@@ -40,7 +41,7 @@ pub struct State {
 
     pub entity_manager: EntityManager,
     pub player_vid: Option<VID>,
-    // pub special_effects: Vec<Box<dyn SpecialEffect>>,
+    pub special_effects: Vec<Box<dyn SpecialEffect>>,
     pub stage: Stage,
 
     pub spatial_grid: Vec<Vec<Vec<VID>>>,
@@ -73,6 +74,7 @@ impl State {
 
             entity_manager: EntityManager::new(),
             player_vid: None,
+            special_effects: Vec::new(),
 
             stage: Stage::new(crate::stage::StageType::TestArena, 64, 64),
 

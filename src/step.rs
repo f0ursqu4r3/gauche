@@ -172,6 +172,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
             };
         }
     }
+
+    step_special_effects(state);
 }
 
 /// Sets entity rotation from -15 to 15 degrees randomly
@@ -185,4 +187,12 @@ pub fn entity_step_sound_lookup(entity: &Entity) -> SoundEffect {
         StepSound::Step1 => SoundEffect::Step1,
         StepSound::Step2 => SoundEffect::Step2,
     }
+}
+
+pub fn step_special_effects(state: &mut State) {
+    for effect in &mut state.special_effects {
+        effect.step();
+    }
+
+    state.special_effects.retain(|effect| !effect.is_finished());
 }
