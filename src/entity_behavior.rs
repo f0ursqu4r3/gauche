@@ -39,8 +39,19 @@ pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
                 false, // Do not ignore tile collision for zombies
                 false, // reset move cooldown
             );
+
+            // if zombie, put him into his base sprite
+            // get entity type, match on it
+            let entity_type = state.entity_manager.get_entity(vid).unwrap().type_;
+            if entity_type == crate::entity::EntityType::Zombie {
+                // set sprite to zombie base sprite
+                if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+                    entity.sprite = Sprite::Zombie;
+                    entity.state = EntityState::Idle; // Reset state to idle after wandering
+                }
+            }
         }
-    };
+    }
 }
 
 pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {

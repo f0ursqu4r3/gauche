@@ -391,7 +391,7 @@ pub fn render_health_bar(
 ) {
     // --- 1. Get Player's Health Percentage ---
     const MAX_HEALTH: f32 = 100.0;
-    let mut health_percentage = 0.75; // Default to 75% for visualization
+    let mut health_percentage = 0.0; // Default to 75% for visualization
 
     if let Some(player_vid) = state.player_vid {
         if let Some(player) = state.entity_manager.get_entity(player_vid) {
