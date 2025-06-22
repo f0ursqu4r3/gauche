@@ -17,7 +17,7 @@ use crate::{
     render::TILE_SIZE,
     sprite::Sprite,
     state::{Mode, State},
-    tile::{self, is_tile_occupied},
+    tile::{self, is_tile_empty, is_tile_occupied},
 };
 
 pub fn step(
@@ -116,14 +116,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
             let target_offset = target_grid_pos - player_grid_pos;
             let target_offset_length_squared = target_offset.length_squared();
             if target_offset_length_squared <= 2 {
-                let taget_block = state
-                    .stage
-                    .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
-                    .unwrap_or(&tile::Tile::None);
                 // if mouse 1 is pressed, place a block
                 if state.playing_inputs.mouse_down[0] {
-                    // Check if the target tile is walkable
-                    if tile::walkable(*taget_block) {
+                    if is_tile_empty(state, target_grid_pos) {
                         // Place a block at the target position
                         state.stage.set_tile(
                             target_grid_pos.x as usize,
@@ -132,7 +127,6 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                         );
                         audio.play_sound_effect(SoundEffect::BlockLand);
                     } else {
-                        // If the target tile is not walkable, play an error sound
                         audio.play_sound_effect(SoundEffect::HitBlock1);
                     }
                     state.playing_inputs.mouse_down[0] = false;
@@ -175,42 +169,6 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
             };
         }
     }
-
-    // spawn particles at the mouse cursor
-    // {
-    //     // let mouse_world_pos = graphics.screen_to_world(state.playing_inputs.mouse_pos);
-    //     // println!("Mouse world position: {:?}", mouse_world_pos);
-
-    //     // get the player position
-    //     let player_pos = state
-    //         .player_vid
-    //         .and_then(|vid| state.entity_manager.get_entity(vid))
-    //         .map(|e| e.pos)
-    //         .unwrap_or(Vec2::ZERO);
-
-    //     // let particle_pos = mouse_world_pos;
-    //     let particle_pos = player_pos;
-
-    //     // 3. Define the data for the particle we want to spawn.
-    //     let particle_data = ParticleData {
-    //         pos: particle_pos,
-    //         size: Vec2::new(16.0, 16.0), // The size of the particle sprite
-    //         rot: random_range(-10.0..10.0), // Give it a random rotation
-    //         alpha: 1.0,                  // Start fully visible, will fade out
-    //         lifetime: 60,                // 60 frames = 1 second at 60 FPS
-    //         initial_lifetime: 60,        // Needed for the fade calculation
-    //         sprite: Sprite::ZombieScratch1, // The sprite to use
-    //     };
-
-    //     // 4. Spawn the particle. We use a "dynamic" particle with zero velocity
-    //     //    so it stays in place but still has its alpha faded out by the manager.
-    //     state.particles.spawn_dynamic(
-    //         particle_data,
-    //         // go up a little bit
-    //         Vec2::new(0.0, -0.01), // Move up slightly
-    //         0.0,                   // No rotational velocity
-    //     );
-    // }
 }
 
 /// Sets entity rotation from -15 to 15 degrees randomly

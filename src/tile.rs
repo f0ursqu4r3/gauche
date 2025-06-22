@@ -15,6 +15,30 @@ pub fn walkable(tile: Tile) -> bool {
     matches!(tile, Tile::None | Tile::Grass)
 }
 
+pub fn empty(tile: Tile) -> bool {
+    matches!(tile, Tile::None)
+}
+
+/// Check if tile is an empty tile and unoccupied by any impassable entities.
+pub fn is_tile_empty(state: &State, tile_coords: IVec2) -> bool {
+    // Check grid bounds first
+    if tile_coords.x < 0
+        || tile_coords.y < 0
+        || tile_coords.x as usize >= state.spatial_grid.len()
+        || tile_coords.y as usize >= state.spatial_grid[0].len()
+    {
+        return false; // Treat out-of-bounds as not empty.
+    }
+    let tile_empty = match state
+        .stage
+        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+    {
+        Some(tile) => empty(*tile),
+        None => false, // If the tile doesn't exist, treat it as occupied.
+    };
+    !is_tile_occupied(state, tile_coords) && tile_empty
+}
+
 /// Helper function to check if a tile is occupied by an impassable entity.
 pub fn is_tile_occupied(state: &State, tile_coords: IVec2) -> bool {
     // Check grid bounds first

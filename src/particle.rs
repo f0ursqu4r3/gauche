@@ -332,40 +332,9 @@ pub fn render_particles(
     graphics: &Graphics,
     layer: ParticleLayer,
 ) {
-    // Call the generic helper directly for each particle type.
-    draw_particle_slice(
-        d,
-        graphics,
-        &state.particles.static_particles,
-        |p| &p.data,
-        layer,
-    );
-    draw_particle_slice(
-        d,
-        graphics,
-        &state.particles.dynamic_particles,
-        |p| &p.data,
-        layer,
-    );
-    draw_particle_slice(
-        d,
-        graphics,
-        &state.particles.accelerated_particles,
-        |p| &p.data,
-        layer,
-    );
-    draw_particle_slice(
-        d,
-        graphics,
-        &state.particles.spline_particles,
-        |p| &p.data,
-        layer,
-    );
-    draw_particle_slice(
-        d,
-        graphics,
-        &state.particles.animated_particles,
-        |p| &p.data,
-        layer,
-    );
+    draw_static_particles(d, graphics, &state.particles.static_particles, layer);
+    draw_dynamic_particles(d, graphics, &state.particles.dynamic_particles, layer);
+    draw_accelerated_particles(d, graphics, &state.particles.accelerated_particles, layer);
+    draw_spline_particles(d, graphics, &state.particles.spline_particles, layer);
+    draw_animated_particles(d, graphics, &state.particles.animated_particles, layer);
 }
