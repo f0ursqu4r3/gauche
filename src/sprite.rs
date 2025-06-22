@@ -12,6 +12,7 @@ pub enum Sprite {
     // Player Sprites
     Player,
     PlayerDead,
+    PlayerFootprint,
 
     // Tile Sprites
     Grass,
@@ -23,4 +24,6 @@ pub enum Sprite {
     Zombie,
     ZombieAngry,
     ZombieScratch1,
+    ZombieGib1,
+    ZombieFootprint,
 }

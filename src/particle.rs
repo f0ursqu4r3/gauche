@@ -92,28 +92,28 @@ impl Particles {
         for p in &mut self.static_particles {
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
             // Example of alpha fade over time
-            p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
+            // p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
         }
 
         for p in &mut self.dynamic_particles {
             p.data.pos += p.vel;
             p.data.rot += p.rot_vel;
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
+            // p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
         }
 
         for p in &mut self.accelerated_particles {
             p.vel += p.acc;
             p.data.pos += p.vel;
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
+            // p.data.alpha = (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
         }
 
         for p in &mut self.spline_particles {
             let age_ratio = 1.0 - (p.data.lifetime as f32) / (p.data.initial_lifetime as f32);
             p.data.pos = calculate_bezier_point(age_ratio, p.start_pos, p.control_point, p.end_pos);
             p.data.lifetime = p.data.lifetime.saturating_sub(1);
-            p.data.alpha = 1.0 - age_ratio; // Fade out
+            // p.data.alpha = 1.0 - age_ratio; // Fade out
         }
 
         for p in &mut self.animated_particles {

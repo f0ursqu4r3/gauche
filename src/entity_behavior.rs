@@ -5,9 +5,11 @@ use rand::{random_range, Rng};
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{swap_step_sound, VID},
+    entity::{swap_step_sound, StepSound, VID},
+    particle::ParticleData,
+    sprite::Sprite,
     state::State,
-    step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
+    step::{entity_step_sound_lookup, lean_entity, FRAMES_PER_SECOND, TIMESTEP},
     tile::{self, is_tile_occupied},
 };
 
@@ -139,6 +141,46 @@ pub fn move_entity_on_grid(
 
         if !dont_reset_move_cooldown {
             reset_move_cooldown(state, vid);
+        }
+
+        // pub struct ParticleData {
+        //     pub pos: Vec2,
+        //     pub size: Vec2,
+        //     pub rot: f32,
+        //     pub alpha: f32,
+        //     pub lifetime: u32,
+        //     pub initial_lifetime: u32, // Used for age-based calculations (e.g., animations)
+        //     pub sprite: Sprite,
+        // }
+
+        // put a footprint based on entity type
+        // put ZombieGib1 slightly offset from entity position
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            let footprint_sprite = match entity.type_ {
+                crate::entity::EntityType::Player => Sprite::PlayerFootprint,
+                crate::entity::EntityType::Zombie => Sprite::ZombieFootprint,
+                _ => Sprite::NoSprite, // No footprint for other entities
+            };
+
+            // Place a footprint at the entity's position
+            let footprint_pos = entity.pos + Vec2::new(0.0, 0.5);
+            //  be 0.2 down, but randomly 0.2 left or right (like different feet)
+            pub const FEET_OFFSET: f32 = 0.2; // Offset for the footprint
+            let offset_x = if entity.step_sound == StepSound::Step1 {
+                -FEET_OFFSET // Left foot
+            } else {
+                FEET_OFFSET // Right foot
+            };
+            let footprint_pos = Vec2::new(footprint_pos.x + offset_x, footprint_pos.y);
+            state.particles.spawn_static(ParticleData {
+                pos: footprint_pos,
+                size: Vec2::new(8.0, 8.0),
+                rot: random_range(-10.0..10.0),
+                alpha: 0.1,
+                lifetime: FRAMES_PER_SECOND * 32,
+                initial_lifetime: 60,
+                sprite: footprint_sprite,
+            });
         }
     }
 

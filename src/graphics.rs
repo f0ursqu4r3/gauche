@@ -112,11 +112,11 @@ impl Graphics {
         pos / TILE_SIZE
     }
 
-    pub fn screen_to_tile(&self, screen_pos: Vec2) -> Vec2 {
+    pub fn screen_to_tile(&self, screen_pos: Vec2) -> IVec2 {
         // Convert screen coordinates to world coordinates
         let world_pos = self.screen_to_world(screen_pos);
         // Convert world coordinates to tile coordinates
-        Vec2::new(world_pos.x.floor(), world_pos.y.floor())
+        IVec2::new(world_pos.x.floor() as i32, world_pos.y.floor() as i32)
     }
 
     /// Converts world coordinates back to window/screen coordinates.
