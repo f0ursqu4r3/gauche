@@ -12,6 +12,7 @@ mod stage;
 mod state;
 mod step;
 mod tile;
+mod utils;
 
 use raylib::{audio::RaylibAudio, ffi::SetTraceLogLevel, prelude::TraceLogLevel};
 use render::render;
