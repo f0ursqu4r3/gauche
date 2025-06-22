@@ -302,11 +302,7 @@ pub fn process_input_playing(
             state.playing_input_debounce_timers.inventory_next =
                 INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
         } else if state.playing_inputs.inventory_prev {
-            if player.selected_inventory_index == 0 {
-                player.selected_inventory_index = 10 - 1;
-            } else {
-                player.selected_inventory_index -= 1;
-            }
+            player.selected_inventory_index = (player.selected_inventory_index + 9) % 10;
             state.playing_input_debounce_timers.inventory_prev =
                 INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
         }

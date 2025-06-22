@@ -7,7 +7,7 @@ pub const TIMESTEP: f32 = 1.0 / FRAMES_PER_SECOND as f32;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{Entity, StepSound, VID},
+    entity::{self, Entity, StepSound, VID},
     entity_behavior::{
         die_if_health_zero, growl_sometimes, indiscriminately_attack_nearby, move_entity_on_grid,
         ready_to_move, step_attack_cooldown, wander,
@@ -118,7 +118,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     let ready_to_place = ready_to_place_tile(state);
     let mut reset_place_tile_cooldown = false;
     if let Some(player_vid) = state.player_vid {
-        let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
+        let player = state.entity_manager.get_entity(player_vid).unwrap();
         // check if place block input is pressed
         if ready_to_place && (state.mouse_inputs.left || state.mouse_inputs.right) {
             let player_grid_pos = player.pos.as_ivec2();
@@ -132,19 +132,26 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                 // if mouse 1 is pressed, place a block
                 if state.mouse_inputs.left {
                     if can_build_on(state, target_grid_pos) {
-                        // Place a block at the target position
-                        state.stage.set_tile(
-                            target_grid_pos.x as usize,
-                            target_grid_pos.y as usize,
-                            TileData {
-                                tile: tile::Tile::Wall,
-                                hp: 100,    // Example: full health for the block
-                                variant: 0, // Example: default wall variant
-                                flip_speed: 0,
-                            },
-                        );
-                        audio.play_sound_effect(SoundEffect::BlockLand);
-                        reset_place_tile_cooldown = true;
+                        if let Some(mut inv_entry) = player.selected_inventory_entry() {
+                            let tile = inv_entry.item.tile;
+                            if inv_entry.item.can_be_placed && tile.is_some() {
+                                // Place a block at the target position
+                                state.stage.set_tile(
+                                    target_grid_pos.x as usize,
+                                    target_grid_pos.y as usize,
+                                    TileData {
+                                        tile: tile.unwrap_or(tile::Tile::None),
+                                        hp: 100,    // Example: full health for the block
+                                        variant: 0, // Example: default wall variant
+                                        flip_speed: 0,
+                                    },
+                                );
+                                audio.play_sound_effect(SoundEffect::BlockLand);
+                                // Remove one block from the inventory
+                                inv_entry.count -= 1;
+                                reset_place_tile_cooldown = true;
+                            }
+                        }
                     }
                 } else if state.mouse_inputs.right {
                     // if the tile was a block, play sound effect

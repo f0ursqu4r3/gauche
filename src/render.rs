@@ -471,38 +471,32 @@ pub fn render_inventory(
     if let Some(player_vid) = state.player_vid {
         if let Some(player) = state.entity_manager.get_entity(player_vid) {
             let mut inv_slots = vec![None; 10];
-            for (i, item) in player.inventory.iter().enumerate() {
-                if i < inv_slots.len() {
-                    inv_slots[i] = Some(item);
+            for item in player.inventory.iter() {
+                if item.index < inv_slots.len() {
+                    inv_slots[item.index] = Some(item);
                 }
             }
             let selected_index = player.selected_inventory_index;
             for i in 0..inv_slots.len() {
                 let x = 10;
-                let y = 110 + (i as i32 * 25);
+                let y = 128 + (i as i32 * 25);
                 let selected_rect;
                 if let Some(entry) = inv_slots[i] {
-                    if entry.amount > 1 {
-                        let item_text =
-                            format!("{} x{}", entity::item_info(entry.item).name, entry.amount);
-                        screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
-                    } else {
-                        // If amount is 1, just show the item name
-                        let item_text = entity::item_info(entry.item).name;
-                        screen.draw_text(item_text, x as i32, y as i32, 20, Color::WHITE);
+                    let item_name = entry.item.name;
+                    let mut item_text = item_name.to_string();
+                    if entry.count > 1 {
+                        item_text = format!("{} x{}", item_text, entry.count);
                     }
-                    let item_text = format!("{} {}", i + 1, entity::item_info(entry.item).name);
                     screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
-                    // Highlight the selected item
                     selected_rect = Rectangle::new(
-                        x as f32 - 5.0,
-                        y as f32,
-                        screen.measure_text(&item_text, 20) as f32 + 10.0,
-                        20.0,
+                        x as f32 - 6.0,
+                        y as f32 - 2.0,
+                        screen.measure_text(&item_text, 20) as f32 + 12.0,
+                        24.0,
                     );
                 } else {
                     screen.draw_text("-", x as i32, y as i32, 20, Color::GRAY);
-                    selected_rect = Rectangle::new(x as f32 - 5.0, y as f32, 60.0, 20.0);
+                    selected_rect = Rectangle::new(x as f32 - 6.0, y as f32 - 2.0, 64.0, 24.0);
                 }
 
                 // Draw selection rectangle

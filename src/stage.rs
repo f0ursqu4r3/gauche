@@ -3,7 +3,7 @@ use noise::{NoiseFn, Perlin};
 use rand::{random, random_range};
 
 use crate::{
-    entity::{self, EntityType, Mood},
+    entity::{self, EntityType, InvEntry, Mood},
     graphics::Graphics,
     sprite::Sprite,
     state::State,
@@ -195,6 +195,11 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             player.alignment = entity::Alignment::Player;
             player.move_cooldown = 0.12;
             player.health = 100;
+            player.inventory.push(entity::InvEntry {
+                index: 0,
+                item: entity::Item::new(entity::ItemType::Wall),
+                count: 50,
+            });
         }
 
         // Try to spawn player on a walkable tile near the center

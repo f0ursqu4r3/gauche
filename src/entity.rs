@@ -208,6 +208,13 @@ impl Entity {
         let bottom_right = Vec2::new(self.pos.x + half_size.x, self.pos.y + half_size.y);
         (top_left, bottom_right)
     }
+
+    pub fn selected_inventory_entry(&self) -> Option<InvEntry> {
+        self.inventory
+            .iter()
+            .find(|entry| entry.index == self.selected_inventory_index)
+            .cloned()
+    }
 }
 
 pub fn swap_step_sound(entity: &mut Entity) {
@@ -229,30 +236,50 @@ pub fn randomize_step_sound(entity: &mut Entity) {
 pub struct InvEntry {
     pub index: usize,
     pub item: Item,
-    pub amount: u32,
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Item {
+pub enum ItemType {
     Wall,
     Medkit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ItemInfo {
+pub struct Item {
+    pub kind: ItemType,
     pub name: &'static str,
     pub description: &'static str,
+    pub can_be_placed: bool,
+    pub can_be_used: bool,
+    pub can_be_dropped: bool,
+    pub tile: Option<tile::Tile>,
+    pub sprite: Option<Sprite>,
 }
 
-pub fn item_info(item: Item) -> ItemInfo {
-    match item {
-        Item::Wall => ItemInfo {
-            name: "Wall",
-            description: "A solid wall that blocks movement.",
-        },
-        Item::Medkit => ItemInfo {
-            name: "Medkit",
-            description: "A medkit that restores health.",
-        },
+impl Item {
+    pub fn new(kind: ItemType) -> Self {
+        match kind {
+            ItemType::Wall => Item {
+                kind: ItemType::Wall,
+                name: "Wall",
+                description: "A solid wall that blocks movement.",
+                can_be_placed: true,
+                can_be_used: false,
+                can_be_dropped: true,
+                tile: Some(tile::Tile::Wall),
+                sprite: None,
+            },
+            ItemType::Medkit => Item {
+                kind: ItemType::Medkit,
+                name: "Medkit",
+                description: "A medkit that restores health.",
+                can_be_placed: false,
+                can_be_used: true,
+                can_be_dropped: true,
+                tile: None,
+                sprite: None,
+            },
+        }
     }
 }
