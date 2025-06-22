@@ -20,6 +20,7 @@ pub enum EntityType {
 pub enum EntityState {
     Idle,
     Walking,
+    Dead,
 }
 
 /** Use for entity state machine, marking intention on stored locations.*/
@@ -134,6 +135,9 @@ pub struct Entity {
 
     pub step_sound: StepSound,
     pub detection_radius: f32,
+
+    pub attack_cooldown: f32,
+    pub attack_cooldown_countdown: f32,
 }
 
 impl Entity {
@@ -179,6 +183,8 @@ impl Entity {
             target_entity: None,
 
             detection_radius: 16.0, // Default detection radius
+            attack_cooldown: 0.0,
+            attack_cooldown_countdown: 0.0,
         }
     }
 

@@ -5,10 +5,10 @@ use rand::random_range;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{swap_step_sound, StepSound, VID},
+    entity::{swap_step_sound, EntityState, StepSound, VID},
     particle::{ParticleData, ParticleLayer},
     sprite::Sprite,
-    state::State,
+    state::{self, get_adjacent_entities, State},
     step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
     tile::is_tile_occupied,
 };
@@ -75,6 +75,170 @@ pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {
         // shake the entity a little
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
             entity.shake = 0.4; // Set shake to a larger value for growl
+        }
+    }
+}
+
+pub enum AttackType {
+    ZombieScratch,
+}
+
+pub fn attack_sprite_lookup(attack_type: AttackType) -> Sprite {
+    match attack_type {
+        AttackType::ZombieScratch => Sprite::ZombieScratch1,
+    }
+}
+
+/// stub
+pub fn attack(
+    state: &mut State,
+    audio: &mut Audio,
+    attacker: &VID,
+    attacked: &VID,
+    attack_type: AttackType,
+) {
+    // check if exists
+    if state.entity_manager.get_entity(*attacker).is_none()
+        || state.entity_manager.get_entity(*attacked).is_none()
+    {
+        return; // Entity not found, exit early
+    }
+
+    // play sound effect based on attack type
+    match attack_type {
+        AttackType::ZombieScratch => {
+            audio.play_sound_effect(SoundEffect::ZombieGrowl2); // Using growl sound as attack sound
+        }
+    }
+
+    // get strength of attack, lets say zombie scratch is 1
+    let attack_strength = match attack_type {
+        AttackType::ZombieScratch => 1, // Zombie scratch deals 1 damage
+    };
+    let attacker_pos = state.entity_manager.get_entity(*attacker).unwrap().pos;
+    let attackee_pos = state.entity_manager.get_entity(*attacked).unwrap().pos;
+    if let Some(attacked_entity) = state.entity_manager.get_entity_mut(*attacked) {
+        if attacked_entity.health >= attack_strength {
+            attacked_entity.health -= attack_strength;
+        } else {
+            attacked_entity.health = 0;
+        }
+        // make them shake a little
+        attacked_entity.shake += 0.5; // Set shake to a moderate value for
+
+        // lean attacker towards attackee at 45 degree angle if attacker is to left or right
+        // if attacker is above, become 0 rot, if below, become 180 rot
+        // attacked will lean in the opposite way
+        pub const ATTACK_LEAN: f32 = 45.0; // Leaning angle
+        if attacker_pos.x < attackee_pos.x {
+            // Attacker is to the left of the attacked
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = -ATTACK_LEAN;
+            state.entity_manager.get_entity_mut(*attacked).unwrap().rot = ATTACK_LEAN;
+        } else if attacker_pos.x > attackee_pos.x {
+            // Attacker is to the right of the attacked
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = ATTACK_LEAN;
+            state.entity_manager.get_entity_mut(*attacked).unwrap().rot = -ATTACK_LEAN;
+        } else if attacker_pos.y < attackee_pos.y {
+            // Attacker is above the attacked
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = 0.0;
+            state.entity_manager.get_entity_mut(*attacked).unwrap().rot = 180.0;
+        } else {
+            // Attacker is below the attacked
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = 180.0;
+            state.entity_manager.get_entity_mut(*attacked).unwrap().rot = 0.0;
+        }
+    }
+
+    // spawn a particle at the attacked entitys position, slightly offset towards the attacker
+    let particle_offset = if attacker_pos.x < attackee_pos.x {
+        Vec2::new(-0.2, 0.0) // Offset to the left
+    } else if attacker_pos.x > attackee_pos.x {
+        Vec2::new(0.2, 0.0) // Offset to the right
+    } else if attacker_pos.y < attackee_pos.y {
+        Vec2::new(0.0, -0.2) // Offset upwards
+    } else {
+        Vec2::new(0.0, 0.2) // Offset downwards
+    };
+    let particle_pos = attackee_pos + particle_offset;
+
+    let sprite = attack_sprite_lookup(attack_type);
+    state.particles.spawn_static(ParticleData::new(
+        particle_pos,
+        Vec2::new(8.0, 8.0),
+        random_range(-10.0..10.0),
+        1.0,
+        30,
+        sprite,
+        ParticleLayer::Foreground,
+    ));
+}
+
+pub fn die_if_health_zero(state: &mut State, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // check if health is zero
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        if entity.health == 0 {
+            entity.state = EntityState::Dead;
+        }
+    }
+}
+
+/// check adjacent tiles, if any of them are occupied by an entity with player alignment, attack them.
+pub fn indiscriminately_attack_nearby(state: &mut State, audio: &mut Audio, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // if not zombie, return
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        if entity.type_ != crate::entity::EntityType::Zombie {
+            return; // Only zombies should attack indiscriminately
+        }
+    }
+
+    // check if entity is ready to attack
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        if entity.attack_cooldown_countdown > 0.0 {
+            return; // Not ready to attack yet
+        }
+    }
+
+    let pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
+    let adjacent_vids = get_adjacent_entities(state, pos);
+    // check if any adjacent entity is player
+    let vid_of_adjacent_player = adjacent_vids.iter().find(|&&adj_vid| {
+        if let Some(adj_entity) = state.entity_manager.get_entity(adj_vid) {
+            adj_entity.alignment == crate::entity::Alignment::Player
+        } else {
+            false // Entity not found, treat as not a player
+        }
+    });
+
+    if let Some(vid) = vid_of_adjacent_player {
+        attack(state, audio, vid, vid, AttackType::ZombieScratch);
+    }
+
+    // reset attack cooldown
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        entity.attack_cooldown_countdown = entity.attack_cooldown; // Reset cooldown countdown
+    }
+}
+
+pub fn step_attack_cooldown(state: &mut State, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // check if entity has attack cooldown
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        if entity.attack_cooldown_countdown > 0.0 {
+            entity.attack_cooldown_countdown -= TIMESTEP;
         }
     }
 }

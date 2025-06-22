@@ -139,3 +139,38 @@ impl State {
         self.get_vids_in_rect(top_left, bottom_right)
     }
 }
+
+/// Helper to get all entities in adjacent tiles, not including center or diagonals.
+/// This version is more direct and performs explicit bounds checking.
+pub fn get_adjacent_entities(state: &State, pos: IVec2) -> Vec<VID> {
+    let mut adjacent_entities = Vec::new();
+
+    // Define the four cardinal directions to check. This is clearer than a nested loop.
+    const OFFSETS: [IVec2; 4] = [
+        IVec2::new(0, 1),  // Down
+        IVec2::new(0, -1), // Up
+        IVec2::new(1, 0),  // Right
+        IVec2::new(-1, 0), // Left
+    ];
+
+    let grid_width = state.stage.get_width() as i32;
+    let grid_height = state.stage.get_height() as i32;
+
+    for offset in OFFSETS {
+        let adjacent_pos = pos + offset;
+
+        // Explicitly check if the position is within the grid's boundaries.
+        // This is safer than relying on `.get()` to handle potential negative indices.
+        if adjacent_pos.x >= 0
+            && adjacent_pos.x < grid_width
+            && adjacent_pos.y >= 0
+            && adjacent_pos.y < grid_height
+        {
+            // We know the indices are valid, so we can safely access the grid.
+            let cell = &state.spatial_grid[adjacent_pos.x as usize][adjacent_pos.y as usize];
+            adjacent_entities.extend_from_slice(cell);
+        }
+    }
+
+    adjacent_entities
+}

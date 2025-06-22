@@ -9,8 +9,9 @@ use crate::{
     audio::{Audio, SoundEffect},
     entity::{Entity, EntityType, StepSound, VID},
     entity_behavior::{
-        growl_sometimes, move_entity_on_grid, pick_random_adjacent_tile_position_include_center,
-        ready_to_move, reset_move_cooldown, wander,
+        die_if_health_zero, growl_sometimes, indiscriminately_attack_nearby, move_entity_on_grid,
+        pick_random_adjacent_tile_position_include_center, ready_to_move, reset_move_cooldown,
+        step_attack_cooldown, wander,
     },
     graphics::Graphics,
     particle::ParticleData,
@@ -167,6 +168,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         wander(state, audio, vid);
         entity_shake_attenuation(state, vid);
         growl_sometimes(state, audio, vid);
+        indiscriminately_attack_nearby(state, audio, vid);
+        die_if_health_zero(state, vid);
+        step_attack_cooldown(state, vid);
     }
 
     // flip tile variants
