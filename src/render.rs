@@ -479,8 +479,8 @@ pub fn draw_cursor(
     let mouse_pos = state.mouse_inputs.pos.as_vec2();
     let cursor_texture = graphics.get_sprite_texture(Sprite::Cursor);
     if let Some(texture) = cursor_texture {
-        let cursor_size = Vec2::new(texture.width() as f32, texture.height() as f32);
-        let cursor_pos = mouse_pos - cursor_size / 2.0;
+        // let cursor_size = Vec2::new(texture.width() as f32, texture.height() as f32);
+        let cursor_pos = mouse_pos;
         screen.draw_texture(
             texture,
             cursor_pos.x as i32,

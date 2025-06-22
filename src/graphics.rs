@@ -54,6 +54,7 @@ impl Graphics {
             rl.toggle_fullscreen();
             // In fullscreen, you might want the window dims to match the monitor
         }
+        rl.disable_cursor();
 
         center_window(rl, window_dims.x as i32, window_dims.y as i32);
 
