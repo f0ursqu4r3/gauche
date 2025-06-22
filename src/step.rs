@@ -106,35 +106,44 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     if let Some(player_vid) = state.player_vid {
         let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
         // check if place block input is pressed
-        if let Some(place_block) = state.playing_inputs.place_block {
+        if state.playing_inputs.mouse_down.iter().any(|&down| down) {
             let player_grid_pos = player.pos.as_ivec2();
-            let target_grid_pos =
-                graphics.screen_tc(Vec2::new(place_block.x as f32, place_block.y as f32));
+            let target_grid_pos = state.playing_inputs.mouse_pos.as_ivec2();
             // Check if the target position is adjacent to the player
             let target_offset = target_grid_pos - player_grid_pos;
             let target_offset_length_squared = target_offset.length_squared();
-            if target_offset_length_squared <= 2
-                && state
+            if target_offset_length_squared <= 2 {
+                let taget_block = state
                     .stage
                     .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
-                    .is_some_and(|t| tile::walkable(*t))
-            {
-                // Check if the target tile is unoccupied
-                if !is_tile_occupied(state, target_grid_pos) {
-                    // Place a block at the target position
+                    .unwrap_or(&tile::Tile::None);
+                // if mouse 1 is pressed, place a block
+                if state.playing_inputs.mouse_down[0] {
+                    // Check if the target tile is walkable
+                    if tile::walkable(*taget_block) {
+                        // Place a block at the target position
+                        state.stage.set_tile(
+                            target_grid_pos.x as usize,
+                            target_grid_pos.y as usize,
+                            tile::Tile::Wall,
+                        );
+                        audio.play_sound_effect(SoundEffect::BlockLand);
+                    } else {
+                        // If the target tile is not walkable, play an error sound
+                        audio.play_sound_effect(SoundEffect::HitBlock1);
+                    }
+                    state.playing_inputs.mouse_down[0] = false;
+                } else if state.playing_inputs.mouse_down[1] {
+                    // If mouse 2 is pressed, remove a block
                     state.stage.set_tile(
                         target_grid_pos.x as usize,
                         target_grid_pos.y as usize,
-                        tile::Tile::Wall, // or whatever tile you want to place
+                        tile::Tile::None, // Example: removing the block
                     );
                     audio.play_sound_effect(SoundEffect::BlockLand);
+                    state.playing_inputs.mouse_down[1] = false;
                 }
-            } else {
-                // If the target position is not adjacent, play an error sound
-                audio.play_sound_effect(SoundEffect::HitBlock1);
             }
-
-            state.playing_inputs.place_block = None;
         }
     }
 

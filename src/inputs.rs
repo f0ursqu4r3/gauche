@@ -67,7 +67,7 @@ pub struct PlayingInputs {
     pub down: bool,
 
     pub mouse_pos: UVec2,
-    pub place_block: Option<UVec2>,
+    pub mouse_down: [bool; 2],
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -78,7 +78,7 @@ impl PlayingInputs {
             down: false,
 
             mouse_pos: UVec2::new(0, 0),
-            place_block: None,
+            mouse_down: [false; 2],
         }
     }
 }
@@ -246,8 +246,10 @@ pub fn process_input_playing(
     // println!("mouse pos {:?}", mouse_tc);
 
     if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT) {
-        state.playing_inputs.place_block =
-            Some(UVec2::new(raw_mouse_pos.x as u32, raw_mouse_pos.y as u32));
+        state.playing_inputs.mouse_down[0] = true;
+    }
+    if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_RIGHT) {
+        state.playing_inputs.mouse_down[1] = true;
     }
 }
 

@@ -133,7 +133,7 @@ pub fn get_alpha_from_distance(root: Vec2, target: Vec2, view_distance: f32) -> 
     }
 }
 
-pub const VIEW_DISTANCE: f32 = 16.0 * TILE_SIZE;
+pub const VIEW_DISTANCE: f32 = 12.0 * TILE_SIZE;
 /// wrapper for above that takes in state, and target
 pub fn get_alpha_from_state(state: &State, target: Vec2) -> u8 {
     if let Some(player_vid) = state.player_vid {
@@ -204,7 +204,17 @@ pub fn render_playing(
                         if let Some(texture) = graphics.get_sprite_texture(sprite) {
                             // Calculate alpha based on distance from player
                             let alpha = if let Some(player_pos) = player_pos_pixels {
-                                get_alpha_from_distance(player_pos, tile_pixel_pos, VIEW_DISTANCE)
+                                let distance = (tile_pixel_pos - player_pos).length();
+                                let tile_distance = (distance / TILE_SIZE).floor() as u32;
+                                let max_steps = (VIEW_DISTANCE / TILE_SIZE) as u32;
+                                let step_alpha = if tile_distance >= max_steps {
+                                    0
+                                } else {
+                                    // 255 at center, 0 at max_steps
+                                    (((max_steps - tile_distance) as f32 / max_steps as f32)
+                                        * 255.0) as u8
+                                };
+                                step_alpha
                             } else {
                                 255 // If no player, everything is fully visible
                             };
