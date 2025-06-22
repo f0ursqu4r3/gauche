@@ -9,6 +9,7 @@ use raylib::prelude::*;
 use crate::{
     entity::EntityType,
     graphics::Graphics,
+    particle::render_particles,
     state::{Mode, State},
 };
 
@@ -271,6 +272,8 @@ pub fn render_playing(
                 }
             }
         }
+
+        render_particles(&mut d, state, graphics);
     }
 
     // --- UI / Debug Text Rendering ---

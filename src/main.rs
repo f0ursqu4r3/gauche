@@ -4,9 +4,9 @@ mod entity_behavior;
 mod entity_manager;
 mod graphics;
 mod inputs;
+mod particle;
 mod render;
 mod settings;
-mod special_effects;
 mod sprite;
 mod stage;
 mod state;
@@ -17,7 +17,7 @@ use raylib::{audio::RaylibAudio, ffi::SetTraceLogLevel, prelude::TraceLogLevel};
 use render::render;
 use step::step;
 
-use crate::{audio::Song, inputs::process_input};
+use crate::inputs::process_input;
 
 fn main() {
     ////////////////        GRAPHICS INIT        ////////////////
