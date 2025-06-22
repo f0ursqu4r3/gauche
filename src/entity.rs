@@ -138,6 +138,8 @@ pub struct Entity {
 
     pub attack_cooldown: f32,
     pub attack_cooldown_countdown: f32,
+
+    pub inventory: Vec<InvEntry>,
 }
 
 impl Entity {
@@ -185,6 +187,8 @@ impl Entity {
             detection_radius: 16.0, // Default detection radius
             attack_cooldown: 0.0,
             attack_cooldown_countdown: 0.0,
+
+            inventory: Vec::new(),
         }
     }
 
@@ -217,4 +221,35 @@ pub fn randomize_step_sound(entity: &mut Entity) {
     } else {
         StepSound::Step2
     };
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InvEntry {
+    pub index: usize,
+    pub item: Item,
+    pub amount: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Item {
+    Wall,
+    Medkit,
+}
+
+pub struct ItemInfo {
+    pub name: &'static str,
+    pub description: &'static str,
+}
+
+pub fn item_info(item: Item) -> ItemInfo {
+    match item {
+        Item::Wall => ItemInfo {
+            name: "Wall",
+            description: "A solid wall that blocks movement.",
+        },
+        Item::Medkit => ItemInfo {
+            name: "Medkit",
+            description: "A medkit that restores health.",
+        },
+    }
 }
