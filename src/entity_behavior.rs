@@ -120,7 +120,7 @@ pub fn attack(
 
     // get strength of attack, lets say zombie scratch is 1
     let attack_strength = match attack_type {
-        AttackType::ZombieScratch => 1, // Zombie scratch deals 1 damage
+        AttackType::ZombieScratch => 5, // Zombie scratch deals 1 damage
     };
     let attacker_pos = state.entity_manager.get_entity(*attacker).unwrap().pos;
     let attackee_pos = state.entity_manager.get_entity(*attacked).unwrap().pos;

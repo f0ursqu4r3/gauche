@@ -213,7 +213,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     state.add_entity_to_grid(player_vid, player_grid_pos);
 
     // --- Spawn Zombies ---
-    let num_zombies = 100;
+    let num_zombies = 512;
     for _ in 0..num_zombies {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
