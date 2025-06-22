@@ -286,6 +286,8 @@ pub fn render_playing(
         render_particles(&mut d, state, graphics, ParticleLayer::Foreground);
     }
 
+    render_health_bar(state, graphics, screen);
+
     // --- UI / Debug Text Rendering ---
     // (UI rendering code remains unchanged)
     let player_pos_text = if let Some(player_vid) = state.player_vid {
@@ -346,4 +348,82 @@ pub fn render_win(
 ) {
     screen.clear_background(Color::GOLD);
     screen.draw_text("YOU WIN! (STUB)", 20, 20, 30, Color::WHITE);
+}
+
+/// Renders a stylized, offset, angled health bar for the player.
+pub fn render_health_bar(
+    state: &State,
+    graphics: &Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    // --- 1. Get Player's Health Percentage ---
+    const MAX_HEALTH: f32 = 100.0;
+    let mut health_percentage = 0.75; // Default to 75% for visualization
+
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            // Check if health is > 0 to avoid using the default visualization value
+            if player.health > 0 {
+                health_percentage = (player.health as f32 / MAX_HEALTH).clamp(0.0, 1.0);
+            }
+        }
+    }
+
+    // --- 2. Define Bar Geometry & Style ---
+    let screen_width = graphics.dims.x as f32;
+    let screen_height = graphics.dims.y as f32;
+
+    const BACKGROUND_ANGLE: f32 = -2.0;
+    const HEALTH_BAR_ANGLE: f32 = -3.0;
+
+    let bar_width = screen_width * 0.25;
+    let bar_height = 30.0;
+
+    let container_pos = Vector2::new(
+        screen_width * 0.05,
+        screen_height - bar_height - (screen_height * 0.05),
+    );
+
+    // Define the offset for the red bar (e.g., 8 pixels right and 8 pixels up)
+    const OFFSET_AMOUNT: f32 = 4.0;
+    const RED_BAR_OFFSET: Vector2 = Vector2::new(OFFSET_AMOUNT, -OFFSET_AMOUNT);
+
+    // The rotation origin for the background bar (its left-center edge)
+    let background_origin = Vector2::new(0.0, bar_height / 2.0);
+
+    // --- 3. Draw the Background Bar ---
+    let background_rect = Rectangle::new(container_pos.x, container_pos.y, bar_width, bar_height);
+    screen.draw_rectangle_pro(
+        background_rect,
+        background_origin,
+        BACKGROUND_ANGLE,
+        Color::new(10, 10, 10, 220),
+    );
+
+    // --- 4. Draw the Offset Red Health Bar ---
+    if health_percentage > 0.0 {
+        let health_fill_width = bar_width * health_percentage;
+
+        // Apply the positional offset to the health bar's rectangle
+        let health_rect = Rectangle::new(
+            container_pos.x + RED_BAR_OFFSET.x,
+            container_pos.y + RED_BAR_OFFSET.y,
+            health_fill_width,
+            bar_height,
+        );
+
+        // To make the offset bar rotate around the same world-space pivot as the background,
+        // we must compensate its local origin for the positional offset.
+        let compensated_origin = Vector2::new(
+            background_origin.x - RED_BAR_OFFSET.x,
+            background_origin.y - RED_BAR_OFFSET.y,
+        );
+
+        screen.draw_rectangle_pro(
+            health_rect,
+            compensated_origin, // Use the new, compensated origin
+            HEALTH_BAR_ANGLE,
+            Color::RED,
+        );
+    }
 }
