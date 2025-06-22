@@ -109,6 +109,7 @@ pub struct Entity {
     pub size: Vec2,
     pub dist_traveled_this_frame: f32,
     pub rot: f32,
+    pub shake: f32,
 
     //  Rendering
     pub draw_layer: DrawLayer,
@@ -153,6 +154,7 @@ impl Entity {
             size: Vec2::new(8.0, 8.0),
             dist_traveled_this_frame: 0.0,
             rot: 0.0,
+            shake: 0.0,
 
             // Rendering
             draw_layer: DrawLayer::Middle,

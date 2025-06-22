@@ -4,15 +4,15 @@
 */
 
 use glam::Vec2;
+use rand::random_range;
 use raylib::prelude::*;
 
 use crate::{
     entity::EntityType,
     graphics::Graphics,
     particle::{render_particles, ParticleLayer},
-    stage::TileData,
     state::{Mode, State},
-    tile::{get_tile_sprite, get_tile_variants},
+    tile::get_tile_sprite,
 };
 
 pub const TILE_SIZE: f32 = 16.0;
@@ -191,40 +191,41 @@ pub fn render_playing(
 
         // --- Draw Tiles ---
         for y in 0..state.stage.get_height() {
-            for x in 0..state.stage.get_width() {
+            'row: for x in 0..state.stage.get_width() {
                 let tile_pixel_pos = Vec2::new(x as f32, y as f32) * TILE_SIZE;
 
                 if let Some(tile_data) = state.stage.get_tile(x, y) {
-                    let maybe_sprite = get_tile_sprite(&tile_data);
+                    let sprite = match get_tile_sprite(&tile_data) {
+                        Some(s) => s,
+                        None => continue 'row, // Skip if no sprite found
+                    };
 
-                    if let Some(sprite) = maybe_sprite {
-                        if let Some(texture) = graphics.get_sprite_texture(sprite) {
-                            // Calculate alpha based on distance from player
-                            let alpha = if let Some(player_pos) = player_pos_pixels {
-                                let distance = (tile_pixel_pos - player_pos).length();
-                                let tile_distance = (distance / TILE_SIZE).floor() as u32;
-                                let max_steps = (VIEW_DISTANCE / TILE_SIZE) as u32;
-                                let step_alpha = if tile_distance >= max_steps {
-                                    0
-                                } else {
-                                    // 255 at center, 0 at max_steps
-                                    (((max_steps - tile_distance) as f32 / max_steps as f32)
-                                        * 255.0) as u8
-                                };
-                                step_alpha
+                    if let Some(texture) = graphics.get_sprite_texture(sprite) {
+                        // Calculate alpha based on distance from player
+                        let alpha = if let Some(player_pos) = player_pos_pixels {
+                            let distance = (tile_pixel_pos - player_pos).length();
+                            let tile_distance = (distance / TILE_SIZE).floor() as u32;
+                            let max_steps = (VIEW_DISTANCE / TILE_SIZE) as u32;
+                            let step_alpha = if tile_distance >= max_steps {
+                                0
                             } else {
-                                255 // If no player, everything is fully visible
+                                // 255 at center, 0 at max_steps
+                                (((max_steps - tile_distance) as f32 / max_steps as f32) * 255.0)
+                                    as u8
                             };
+                            step_alpha
+                        } else {
+                            255 // If no player, everything is fully visible
+                        };
 
-                            // Only draw if it's visible at all
-                            if alpha > 0 {
-                                d.draw_texture(
-                                    texture,
-                                    tile_pixel_pos.x as i32,
-                                    tile_pixel_pos.y as i32,
-                                    Color::new(255, 255, 255, alpha),
-                                );
-                            }
+                        // Only draw if it's visible at all
+                        if alpha > 0 {
+                            d.draw_texture(
+                                texture,
+                                tile_pixel_pos.x as i32,
+                                tile_pixel_pos.y as i32,
+                                Color::new(255, 255, 255, alpha),
+                            );
                         }
                     }
                 }
@@ -251,14 +252,25 @@ pub fn render_playing(
                     let entity_pixel_pos = entity.pos * TILE_SIZE;
                     let source_rec =
                         Rectangle::new(0.0, 0.0, texture.width() as f32, texture.height() as f32);
-                    let dest_rec = Rectangle::new(
-                        entity_pixel_pos.x,
-                        entity_pixel_pos.y,
-                        TILE_SIZE,
-                        TILE_SIZE,
-                    );
-                    let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
+                    // apply shake
+                    let position = if entity.shake == 0.0 {
+                        entity_pixel_pos
+                    } else {
+                        // Apply shake offset
+                        let shake_offset = entity.shake * TILE_SIZE;
+                        // random offset in x and y
+                        let shake_x = random_range(-shake_offset..shake_offset);
+                        let shake_y = random_range(-shake_offset..shake_offset);
+                        // Apply shake to position
+                        let shake_offset = Vec2::new(shake_x, shake_y);
+                        Vec2::new(
+                            entity_pixel_pos.x + shake_offset.x,
+                            entity_pixel_pos.y + shake_offset.y,
+                        )
+                    };
 
+                    let dest_rec = Rectangle::new(position.x, position.y, TILE_SIZE, TILE_SIZE);
+                    let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
                     d.draw_texture_pro(
                         texture,
                         source_rec,

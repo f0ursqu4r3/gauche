@@ -7,10 +7,10 @@ pub const TIMESTEP: f32 = 1.0 / FRAMES_PER_SECOND as f32;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{Entity, EntityType, StepSound},
+    entity::{Entity, EntityType, StepSound, VID},
     entity_behavior::{
         move_entity_on_grid, pick_random_adjacent_tile_position_include_center, ready_to_move,
-        reset_move_cooldown,
+        reset_move_cooldown, wander,
     },
     graphics::Graphics,
     particle::ParticleData,
@@ -164,29 +164,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     }
 
     // --- AI / Other Entity Logic ---
-    let all_vids: Vec<_> = state.entity_manager.iter().map(|e| e.vid).collect();
-    for vid in all_vids {
-        if Some(vid) == state.player_vid || state.entity_manager.get_entity(vid).is_none() {
-            continue;
-        }
-
-        if let Some(EntityType::Zombie) = state.entity_manager.get_entity(vid).map(|e| e.type_) {
-            if ready_to_move(state, vid) {
-                let current_tile_pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
-                let wants_to_move_to =
-                    pick_random_adjacent_tile_position_include_center(current_tile_pos);
-                if wants_to_move_to != current_tile_pos {
-                    move_entity_on_grid(
-                        state,
-                        audio,
-                        vid,
-                        wants_to_move_to,
-                        false, // Do not ignore tile collision for zombies
-                        false, // reset move cooldown
-                    );
-                }
-            };
-        }
+    for vid in state.entity_manager.get_active_vids() {
+        wander(state, audio, vid);
+        entity_shake_attenuation(state, vid);
     }
 
     // flip tile variants
@@ -203,5 +183,15 @@ pub fn entity_step_sound_lookup(entity: &Entity) -> SoundEffect {
     match entity.step_sound {
         StepSound::Step1 => SoundEffect::Step1,
         StepSound::Step2 => SoundEffect::Step2,
+    }
+}
+
+pub fn entity_shake_attenuation(state: &mut State, vid: VID) {
+    let entity = state.entity_manager.get_entity_mut(vid).unwrap();
+    pub const SHAKE_ATTENUATION_RATE: f32 = 0.01;
+    if entity.shake > SHAKE_ATTENUATION_RATE {
+        entity.shake -= SHAKE_ATTENUATION_RATE
+    } else {
+        entity.shake = 0.0
     }
 }

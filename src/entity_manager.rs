@@ -113,6 +113,15 @@ impl EntityManager {
         self.entities.iter_mut()
     }
 
+    /// Iter all vids of active entities, collect
+    pub fn get_active_vids(&self) -> Vec<VID> {
+        self.entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.vid)
+            .collect()
+    }
+
     pub fn clear_all_entities(&mut self) {
         self.available_ids.clear();
         for i in 0..Self::MAX_NUM_ENTITIES {

@@ -252,6 +252,15 @@ pub fn process_input_playing(
     if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_RIGHT) {
         state.playing_inputs.mouse_down[1] = true;
     }
+
+    // if i hit space set the player .shake to 1.0
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SPACE) {
+        if let Some(player_vid) = state.player_vid {
+            if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                player.shake = 0.1;
+            }
+        }
+    }
 }
 
 ////////////////////////    INPUT DEBOUNCE TIMERS    ////////////////////////

@@ -1,7 +1,7 @@
 // wander behavior
 
 use glam::{IVec2, Vec2};
-use rand::{random_range, Rng};
+use rand::random_range;
 
 use crate::{
     audio::{Audio, SoundEffect},
@@ -9,12 +9,38 @@ use crate::{
     particle::{ParticleData, ParticleLayer},
     sprite::Sprite,
     state::State,
-    step::{entity_step_sound_lookup, lean_entity, FRAMES_PER_SECOND, TIMESTEP},
-    tile::{self, is_tile_occupied},
+    step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
+    tile::is_tile_occupied,
 };
 
-pub fn wander(state: &mut State, vid: VID) {
+pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // check mood is wandering
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        if entity.mood != crate::entity::Mood::Wander {
+            return; // Entity is not in a wandering mood, exit early
+        }
+    }
+
     // check if entity is wandering, if is, move to random position
+    if ready_to_move(state, vid) {
+        let current_tile_pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
+        let wants_to_move_to = pick_random_adjacent_tile_position_include_center(current_tile_pos);
+        if wants_to_move_to != current_tile_pos {
+            move_entity_on_grid(
+                state,
+                audio,
+                vid,
+                wants_to_move_to,
+                false, // Do not ignore tile collision for zombies
+                false, // reset move cooldown
+            );
+        }
+    };
 }
 
 /// Checks if an entity is ready to move based on its cooldown.
