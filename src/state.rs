@@ -3,7 +3,9 @@ use glam::IVec2;
 use crate::{
     entity::VID,
     entity_manager::EntityManager,
-    inputs::{MenuInputDebounceTimers, MenuInputs, MouseInputs, PlayingInputs},
+    inputs::{
+        MenuInputDebounceTimers, MenuInputs, MouseInputs, PlayingInputDebounceTimers, PlayingInputs,
+    },
     particle::Particles,
     stage::Stage,
 };
@@ -21,9 +23,12 @@ pub struct State {
     pub mode: Mode,
 
     pub mouse_inputs: MouseInputs,
+
     pub menu_inputs: MenuInputs,
     pub menu_input_debounce_timers: MenuInputDebounceTimers,
+
     pub playing_inputs: PlayingInputs,
+    pub playing_input_debounce_timers: PlayingInputDebounceTimers,
 
     pub running: bool,
     pub now: f64,
@@ -58,7 +63,9 @@ impl State {
             mouse_inputs: MouseInputs::new(),
             menu_inputs: MenuInputs::new(),
             menu_input_debounce_timers: MenuInputDebounceTimers::new(),
+
             playing_inputs: PlayingInputs::new(),
+            playing_input_debounce_timers: PlayingInputDebounceTimers::new(),
 
             running: true,
             now: 0.0,

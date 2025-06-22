@@ -319,36 +319,8 @@ pub fn render_playing(
     });
     screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
 
-    // draw inventory if player exists
-    if let Some(player_vid) = state.player_vid {
-        if let Some(player) = state.entity_manager.get_entity(player_vid) {
-            let mut inv_slots = vec![None; 10];
-            for (i, item) in player.inventory.iter().enumerate() {
-                if i < inv_slots.len() {
-                    inv_slots[i] = Some(item);
-                }
-            }
-            for i in 0..inv_slots.len() {
-                let x = 10;
-                let y = 110 + (i as i32 * 25);
-                if let Some(entry) = inv_slots[i] {
-                    if entry.amount > 1 {
-                        let item_text =
-                            format!("{} x{}", entity::item_info(entry.item).name, entry.amount);
-                        screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
-                    } else {
-                        // If amount is 1, just show the item name
-                        let item_text = entity::item_info(entry.item).name;
-                        screen.draw_text(item_text, x as i32, y as i32, 20, Color::WHITE);
-                    }
-                    let item_text = format!("{} {}", i + 1, entity::item_info(entry.item).name);
-                    screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
-                } else {
-                    screen.draw_text("-", x as i32, y as i32, 20, Color::GRAY);
-                }
-            }
-        }
-    }
+    // draw inventory
+    render_inventory(state, graphics, screen);
 }
 
 // --- Stub Functions ---
@@ -462,6 +434,7 @@ pub fn render_health_bar(
         );
     }
 }
+
 // #[derive(Debug, Clone, Copy)]
 // pub struct MouseInputs {
 //     pub left: bool,
@@ -488,4 +461,55 @@ pub fn draw_cursor(
             Color::WHITE,
         );
     };
+}
+
+pub fn render_inventory(
+    state: &State,
+    _graphics: &Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            let mut inv_slots = vec![None; 10];
+            for (i, item) in player.inventory.iter().enumerate() {
+                if i < inv_slots.len() {
+                    inv_slots[i] = Some(item);
+                }
+            }
+            let selected_index = player.selected_inventory_index;
+            for i in 0..inv_slots.len() {
+                let x = 10;
+                let y = 110 + (i as i32 * 25);
+                let selected_rect;
+                if let Some(entry) = inv_slots[i] {
+                    if entry.amount > 1 {
+                        let item_text =
+                            format!("{} x{}", entity::item_info(entry.item).name, entry.amount);
+                        screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
+                    } else {
+                        // If amount is 1, just show the item name
+                        let item_text = entity::item_info(entry.item).name;
+                        screen.draw_text(item_text, x as i32, y as i32, 20, Color::WHITE);
+                    }
+                    let item_text = format!("{} {}", i + 1, entity::item_info(entry.item).name);
+                    screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
+                    // Highlight the selected item
+                    selected_rect = Rectangle::new(
+                        x as f32 - 5.0,
+                        y as f32,
+                        screen.measure_text(&item_text, 20) as f32 + 10.0,
+                        20.0,
+                    );
+                } else {
+                    screen.draw_text("-", x as i32, y as i32, 20, Color::GRAY);
+                    selected_rect = Rectangle::new(x as f32 - 5.0, y as f32, 60.0, 20.0);
+                }
+
+                // Draw selection rectangle
+                if i == selected_index {
+                    screen.draw_rectangle_lines_ex(selected_rect, 2.0, Color::WHITE);
+                }
+            }
+        }
+    }
 }

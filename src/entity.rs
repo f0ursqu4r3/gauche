@@ -140,6 +140,7 @@ pub struct Entity {
     pub attack_cooldown_countdown: f32,
 
     pub inventory: Vec<InvEntry>,
+    pub selected_inventory_index: usize,
 }
 
 impl Entity {
@@ -189,6 +190,7 @@ impl Entity {
             attack_cooldown_countdown: 0.0,
 
             inventory: Vec::new(),
+            selected_inventory_index: 0,
         }
     }
 
@@ -236,6 +238,7 @@ pub enum Item {
     Medkit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ItemInfo {
     pub name: &'static str,
     pub description: &'static str,
