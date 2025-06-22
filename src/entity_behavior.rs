@@ -74,7 +74,7 @@ pub fn move_entity_on_grid(
     // Check if the terrain is walkable
     let terrain_is_walkable = state
         .stage
-        .get_tile(target_grid_pos.x as usize, target_grid_pos.y as usize)
+        .get_tile_type(target_grid_pos.x as usize, target_grid_pos.y as usize)
         .is_some_and(|t| t.walkable());
 
     // Check if the tile is already occupied by another impassable entity

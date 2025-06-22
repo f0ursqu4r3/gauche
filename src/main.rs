@@ -92,7 +92,7 @@ fn main() {
         );
         audio.update_current_song_stream_data();
     }
-    ////////////////        CLEANUP        ////////////////
+    ////////////////        CLEANUP       ////////////////
     println!("Exiting Gauche. Thanks for playing!");
     std::process::exit(0);
 }

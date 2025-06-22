@@ -1,8 +1,8 @@
 use glam::IVec2;
 
-use crate::state::State;
+use crate::{sprite::Sprite, stage::TileData, state::State};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Tile {
     None,
     Grass,
@@ -38,7 +38,7 @@ pub fn is_tile_walkable(state: &State, tile_coords: IVec2) -> bool {
 
     let tile_walkable = match state
         .stage
-        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+        .get_tile_type(tile_coords.x as usize, tile_coords.y as usize)
     {
         Some(tile) => tile.walkable(),
         None => false, // If the tile doesn't exist, treat it as not walkable.
@@ -60,7 +60,7 @@ pub fn can_build_on(state: &State, tile_coords: IVec2) -> bool {
 
     let tile_buildable_upon = match state
         .stage
-        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+        .get_tile_type(tile_coords.x as usize, tile_coords.y as usize)
     {
         Some(tile) => tile.can_build_on(),
         None => false, // If the tile doesn't exist, treat it as not buildable.
@@ -80,7 +80,7 @@ pub fn is_tile_empty(state: &State, tile_coords: IVec2) -> bool {
     }
     let tile_empty = match state
         .stage
-        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+        .get_tile_type(tile_coords.x as usize, tile_coords.y as usize)
     {
         Some(tile) => tile.empty(),
         None => false, // If the tile doesn't exist, treat it as occupied.
@@ -112,4 +112,24 @@ pub fn is_tile_occupied(state: &State, tile_coords: IVec2) -> bool {
     }
 
     false // No impassable entities found.
+}
+
+pub fn get_tile_variants(tile_data: &TileData) -> Vec<Sprite> {
+    match tile_data.tile {
+        Tile::Grass => vec![Sprite::Grass],
+        Tile::Wall => vec![Sprite::Wall],
+        Tile::Ruin => vec![Sprite::Ruin],
+        Tile::Water => vec![Sprite::Water3, Sprite::Water4],
+        _ => vec![],
+    }
+}
+
+// take in a tile data, fetch variants, and lookup the current variant
+pub fn get_tile_sprite(tile_data: &TileData) -> Option<Sprite> {
+    let variants = get_tile_variants(tile_data);
+    if (tile_data.variant as usize) < variants.len() {
+        Some(variants[tile_data.variant as usize])
+    } else {
+        None // Return None if the index is out of bounds
+    }
 }

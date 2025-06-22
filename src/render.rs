@@ -10,7 +10,9 @@ use crate::{
     entity::EntityType,
     graphics::Graphics,
     particle::{render_particles, ParticleLayer},
+    stage::TileData,
     state::{Mode, State},
+    tile::{get_tile_sprite, get_tile_variants},
 };
 
 pub const TILE_SIZE: f32 = 16.0;
@@ -192,14 +194,8 @@ pub fn render_playing(
             for x in 0..state.stage.get_width() {
                 let tile_pixel_pos = Vec2::new(x as f32, y as f32) * TILE_SIZE;
 
-                if let Some(tile) = state.stage.get_tile(x, y) {
-                    let maybe_sprite = match tile {
-                        crate::tile::Tile::Grass => Some(crate::sprite::Sprite::Grass),
-                        crate::tile::Tile::Wall => Some(crate::sprite::Sprite::Wall),
-                        crate::tile::Tile::Ruin => Some(crate::sprite::Sprite::Ruin),
-                        crate::tile::Tile::Water => Some(crate::sprite::Sprite::Water),
-                        _ => None,
-                    };
+                if let Some(tile_data) = state.stage.get_tile(x, y) {
+                    let maybe_sprite = get_tile_sprite(&tile_data);
 
                     if let Some(sprite) = maybe_sprite {
                         if let Some(texture) = graphics.get_sprite_texture(sprite) {

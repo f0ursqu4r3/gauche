@@ -7,38 +7,78 @@ use crate::{
     graphics::Graphics,
     sprite::Sprite,
     state::State,
-    tile::{is_tile_empty, is_tile_walkable, Tile},
+    step::FRAMES_PER_SECOND,
+    tile::{get_tile_variants, is_tile_walkable, Tile},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum StageType {
     TestArena,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TileData {
+    pub tile: Tile,
+    pub hp: u8,
+    pub variant: u8,
+    pub flip_speed: u16,
+}
+
+#[derive(Debug, Clone)]
 pub struct Stage {
     pub stage_type: StageType,
-    pub tiles: Vec<Vec<Tile>>,
+    pub tiles: Vec<Vec<TileData>>,
 }
 
 impl Stage {
-    pub fn new(stage_type: StageType, width: usize, height: usize) -> Self {
-        let tiles = vec![vec![Tile::None; height]; width];
-        Self { stage_type, tiles }
+    pub fn new(stage_type: StageType, width: usize, height: usize) -> Stage {
+        let tiles = vec![
+            vec![
+                TileData {
+                    tile: Tile::None,
+                    hp: 0,
+                    variant: 0,
+                    flip_speed: 0,
+                };
+                height
+            ];
+            width
+        ];
+
+        Stage { stage_type, tiles }
     }
 
-    pub fn get_tile(&self, x: usize, y: usize) -> Option<Tile> {
-        self.tiles.get(x).and_then(|row| row.get(y)).cloned()
-    }
-
-    pub fn set_tile(&mut self, x: usize, y: usize, tile: Tile) {
+    pub fn get_tile_type(&self, x: usize, y: usize) -> Option<Tile> {
         if x < self.tiles.len() && y < self.tiles[0].len() {
-            self.tiles[x][y] = tile;
+            Some(self.tiles[x][y].tile)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_tile(&self, x: usize, y: usize) -> Option<TileData> {
+        if x < self.tiles.len() && y < self.tiles[0].len() {
+            Some(self.tiles[x][y])
+        } else {
+            None
+        }
+    }
+
+    pub fn set_tile(&mut self, x: usize, y: usize, tile_data: TileData) {
+        if x < self.tiles.len() && y < self.tiles[0].len() {
+            self.tiles[x][y] = tile_data;
         }
     }
 
     pub fn clear(&mut self) {
         for row in &mut self.tiles {
             for tile in row {
-                *tile = Tile::None;
+                *tile = TileData {
+                    tile: Tile::None,
+                    hp: 0,
+                    variant: 0,
+                    flip_speed: 0,
+                };
             }
         }
     }
@@ -67,7 +107,6 @@ impl Stage {
 }
 
 pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
-    state.stage_frame = 0;
     state.mode = crate::state::Mode::Playing;
     state.stage = Stage::new(StageType::TestArena, 64, 64);
     // ... other state init ...
@@ -99,11 +138,43 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             // Set tile based on noise value thresholds.
             // Values around 0 will be void.
             if noise_value > 0.4 {
-                state.stage.set_tile(x, y, Tile::Grass);
-            } else if noise_value < -0.3 {
-                state.stage.set_tile(x, y, Tile::Water);
+                state.stage.set_tile(
+                    x,
+                    y,
+                    TileData {
+                        tile: Tile::Grass,
+                        hp: 0,
+                        variant: 0,
+                        flip_speed: 0,
+                    },
+                );
+            } else if noise_value < -0.8 {
+                state.stage.set_tile(
+                    x,
+                    y,
+                    TileData {
+                        tile: Tile::Water,
+                        hp: 0,
+                        variant: // randomize water variant
+                            if random::<bool>() {
+                                0 // Variant 0 for water
+                            } else {
+                                1 // Variant 1 for water
+                            },
+                        flip_speed: FRAMES_PER_SECOND as u16, // Flip every 2 seconds
+                    },
+                );
             } else {
-                state.stage.set_tile(x, y, Tile::None);
+                state.stage.set_tile(
+                    x,
+                    y,
+                    TileData {
+                        tile: Tile::None,
+                        hp: 0,
+                        variant: 0,
+                        flip_speed: 0,
+                    },
+                );
             }
         }
     }
@@ -175,6 +246,30 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                 }
             }
             state.add_entity_to_grid(vid, zombie_grid_pos);
+        }
+    }
+}
+
+/// check tile data flip speed % state.frame to see if it should flip
+pub fn flip_stage_tiles(state: &mut State) {
+    for x in 0..state.stage.get_width() {
+        for y in 0..state.stage.get_height() {
+            if let Some(tile_data) = state.stage.get_tile(x, y) {
+                if tile_data.flip_speed > 0 && state.frame % tile_data.flip_speed as u32 == 0 {
+                    let new_variant =
+                        (tile_data.variant + 1) % get_tile_variants(&tile_data).len() as u8;
+                    state.stage.set_tile(
+                        x,
+                        y,
+                        TileData {
+                            tile: tile_data.tile,
+                            hp: tile_data.hp,
+                            variant: new_variant,
+                            flip_speed: tile_data.flip_speed,
+                        },
+                    );
+                }
+            }
         }
     }
 }

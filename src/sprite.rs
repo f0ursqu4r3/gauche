@@ -18,7 +18,10 @@ pub enum Sprite {
     Grass,
     Wall,
     Ruin,
-    Water,
+    Water1,
+    Water2,
+    Water3,
+    Water4,
 
     // Enemy Sprites
     Zombie,

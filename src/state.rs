@@ -29,7 +29,6 @@ pub struct State {
     pub time_since_last_update: f32,
     pub scene_frame: u32,
     pub frame: u32,
-    pub stage_frame: u32,
 
     pub game_over: bool,
     pub pause: bool,
@@ -62,7 +61,6 @@ impl State {
             time_since_last_update: 0.0,
             scene_frame: 0,
             frame: 0,
-            stage_frame: 0,
 
             game_over: false,
             pause: false,

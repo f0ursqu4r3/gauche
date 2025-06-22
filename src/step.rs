@@ -16,6 +16,7 @@ use crate::{
     particle::ParticleData,
     render::TILE_SIZE,
     sprite::Sprite,
+    stage::{flip_stage_tiles, TileData},
     state::{Mode, State},
     tile::{self, can_build_on, is_tile_empty, is_tile_occupied},
 };
@@ -47,6 +48,12 @@ pub fn step(
 
         state.particles.step();
         state.scene_frame = state.scene_frame.saturating_add(1);
+    }
+
+    if state.frame == u32::MAX {
+        state.frame = 0;
+    } else {
+        state.frame += 1;
     }
 }
 
@@ -125,7 +132,12 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                         state.stage.set_tile(
                             target_grid_pos.x as usize,
                             target_grid_pos.y as usize,
-                            tile::Tile::Wall,
+                            TileData {
+                                tile: tile::Tile::Wall,
+                                hp: 100,    // Example: full health for the block
+                                variant: 0, // Example: default wall variant
+                                flip_speed: 0,
+                            },
                         );
                         audio.play_sound_effect(SoundEffect::BlockLand);
                     } else {
@@ -137,7 +149,12 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                     state.stage.set_tile(
                         target_grid_pos.x as usize,
                         target_grid_pos.y as usize,
-                        tile::Tile::None, // Example: removing the block
+                        TileData {
+                            tile: tile::Tile::None,
+                            hp: 0,      // Reset health to 0
+                            variant: 0, // Reset to default empty tile
+                            flip_speed: 0,
+                        },
                     );
                     audio.play_sound_effect(SoundEffect::BlockLand);
                     state.playing_inputs.mouse_down[1] = false;
@@ -171,6 +188,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
             };
         }
     }
+
+    // flip tile variants
+    flip_stage_tiles(state);
 }
 
 /// Sets entity rotation from -15 to 15 degrees randomly
