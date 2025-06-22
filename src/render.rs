@@ -9,7 +9,7 @@ use raylib::prelude::*;
 use crate::{
     entity::EntityType,
     graphics::Graphics,
-    particle::render_particles,
+    particle::{render_particles, ParticleLayer},
     state::{Mode, State},
 };
 
@@ -235,6 +235,8 @@ pub fn render_playing(
             }
         }
 
+        render_particles(&mut d, state, graphics, ParticleLayer::Background);
+
         // --- Entity Rendering ---
         for entity in state.entity_manager.iter().filter(|e| e.active) {
             // Player is always fully visible
@@ -273,7 +275,7 @@ pub fn render_playing(
             }
         }
 
-        render_particles(&mut d, state, graphics);
+        render_particles(&mut d, state, graphics, ParticleLayer::Foreground);
     }
 
     // --- UI / Debug Text Rendering ---

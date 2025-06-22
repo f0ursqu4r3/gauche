@@ -6,7 +6,7 @@ use rand::{random_range, Rng};
 use crate::{
     audio::{Audio, SoundEffect},
     entity::{swap_step_sound, StepSound, VID},
-    particle::ParticleData,
+    particle::{ParticleData, ParticleLayer},
     sprite::Sprite,
     state::State,
     step::{entity_step_sound_lookup, lean_entity, FRAMES_PER_SECOND, TIMESTEP},
@@ -179,6 +179,7 @@ pub fn move_entity_on_grid(
                 0.1, // alpha
                 60,  // lifetime
                 footprint_sprite,
+                ParticleLayer::Background,
             ));
         }
     }

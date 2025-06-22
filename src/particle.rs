@@ -6,6 +6,12 @@ use raylib::prelude::{Color, RaylibDraw, RaylibDrawHandle, RaylibTextureMode, Re
 
 // --- 1. Common Data & Specific Particle Structs ---
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParticleLayer {
+    Background, // Renders below tiles and entities (e.g., footprints, ground effects)
+    Foreground, // Renders above everything (e.g., weather, hit effects)
+}
+
 /// Contains common data shared by all particle types.
 /// This keeps the memory layout consistent and simplifies access.
 #[derive(Debug, Clone)]
@@ -14,16 +20,25 @@ pub struct ParticleData {
     pub size: Vec2,
     pub rot: f32,
     pub alpha: f32,
-    pub initial_alpha: f32, // <-- ADD THIS FIELD to store the starting alpha
+    pub initial_alpha: f32, // Initial alpha value, used to calculate fade over lifetime
     pub lifetime: u32,
-    pub initial_lifetime: u32, // Used for age-based calculations (e.g., animations)
+    pub initial_lifetime: u32, // Initial lifetime, used to calculate fade over lifetime
     pub sprite: Sprite,
+    pub layer: ParticleLayer, // Layer to control rendering order
 }
 
 impl ParticleData {
     /// A convenient constructor for creating particle data.
     /// Automatically sets `initial_alpha` and `initial_lifetime` from the given values.
-    pub fn new(pos: Vec2, size: Vec2, rot: f32, alpha: f32, lifetime: u32, sprite: Sprite) -> Self {
+    pub fn new(
+        pos: Vec2,
+        size: Vec2,
+        rot: f32,
+        alpha: f32,
+        lifetime: u32,
+        sprite: Sprite,
+        layer: ParticleLayer,
+    ) -> Self {
         Self {
             pos,
             size,
@@ -33,6 +48,7 @@ impl ParticleData {
             lifetime,                   // This will be updated by the step function
             initial_lifetime: lifetime, // Set from the single `lifetime` parameter
             sprite,
+            layer,
         }
     }
 }
@@ -236,10 +252,12 @@ fn draw_particle_slice<T>(
     graphics: &Graphics,
     particles: &[T],
     get_data: impl Fn(&T) -> &ParticleData,
+    target_layer: ParticleLayer, // The layer we want to draw
 ) {
     for p in particles {
         let data = get_data(p);
-        if data.lifetime > 0 {
+        // This check ensures we only draw particles for the correct layer.
+        if data.lifetime > 0 && data.layer == target_layer {
             if let Some(texture) = graphics.get_sprite_texture(data.sprite) {
                 let source_rec =
                     Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
@@ -263,51 +281,91 @@ fn draw_particle_slice<T>(
     }
 }
 
-// Helper functions that call the generic drawing function with the correct data accessor.
 fn draw_static_particles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
-    g: &Graphics,
-    p: &[StaticParticle],
+    graphics: &Graphics,
+    particles: &[StaticParticle],
+    layer: ParticleLayer,
 ) {
-    draw_particle_slice(d, g, p, |particle| &particle.data);
+    draw_particle_slice(d, graphics, particles, |p| &p.data, layer);
 }
+
 fn draw_dynamic_particles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
-    g: &Graphics,
-    p: &[DynamicParticle],
+    graphics: &Graphics,
+    particles: &[DynamicParticle],
+    layer: ParticleLayer,
 ) {
-    draw_particle_slice(d, g, p, |particle| &particle.data);
+    draw_particle_slice(d, graphics, particles, |p| &p.data, layer);
 }
+
 fn draw_accelerated_particles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
-    g: &Graphics,
-    p: &[AcceleratedParticle],
+    graphics: &Graphics,
+    particles: &[AcceleratedParticle],
+    layer: ParticleLayer,
 ) {
-    draw_particle_slice(d, g, p, |particle| &particle.data);
+    draw_particle_slice(d, graphics, particles, |p| &p.data, layer);
 }
+
 fn draw_spline_particles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
-    g: &Graphics,
-    p: &[SplineParticle],
+    graphics: &Graphics,
+    particles: &[SplineParticle],
+    layer: ParticleLayer,
 ) {
-    draw_particle_slice(d, g, p, |particle| &particle.data);
+    draw_particle_slice(d, graphics, particles, |p| &p.data, layer);
 }
+
 fn draw_animated_particles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
-    g: &Graphics,
-    p: &[AnimatedParticle],
+    graphics: &Graphics,
+    particles: &[AnimatedParticle],
+    layer: ParticleLayer,
 ) {
-    draw_particle_slice(d, g, p, |particle| &particle.data);
+    draw_particle_slice(d, graphics, particles, |p| &p.data, layer);
 }
 
 pub fn render_particles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
     state: &State,
     graphics: &Graphics,
+    layer: ParticleLayer,
 ) {
-    draw_static_particles(d, graphics, &state.particles.static_particles);
-    draw_dynamic_particles(d, graphics, &state.particles.dynamic_particles);
-    draw_accelerated_particles(d, graphics, &state.particles.accelerated_particles);
-    draw_spline_particles(d, graphics, &state.particles.spline_particles);
-    draw_animated_particles(d, graphics, &state.particles.animated_particles);
+    // Call the generic helper directly for each particle type.
+    draw_particle_slice(
+        d,
+        graphics,
+        &state.particles.static_particles,
+        |p| &p.data,
+        layer,
+    );
+    draw_particle_slice(
+        d,
+        graphics,
+        &state.particles.dynamic_particles,
+        |p| &p.data,
+        layer,
+    );
+    draw_particle_slice(
+        d,
+        graphics,
+        &state.particles.accelerated_particles,
+        |p| &p.data,
+        layer,
+    );
+    draw_particle_slice(
+        d,
+        graphics,
+        &state.particles.spline_particles,
+        |p| &p.data,
+        layer,
+    );
+    draw_particle_slice(
+        d,
+        graphics,
+        &state.particles.animated_particles,
+        |p| &p.data,
+        layer,
+    );
 }
