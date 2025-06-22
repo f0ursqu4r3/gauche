@@ -220,7 +220,12 @@ fn draw_particle_slice<T>(
             if let Some(texture) = graphics.get_sprite_texture(data.sprite) {
                 let source_rec =
                     Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
-                let dest_rec = Rectangle::new(data.pos.x, data.pos.y, data.size.x, data.size.y);
+                let dest_rec = Rectangle::new(
+                    data.pos.x * 16.0,
+                    data.pos.y * 16.0,
+                    data.size.x,
+                    data.size.y,
+                );
                 let origin = Vector2::new(data.size.x / 2.0, data.size.y / 2.0);
                 d.draw_texture_pro(
                     texture,

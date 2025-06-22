@@ -96,28 +96,43 @@ impl Graphics {
         self.sprite_textures.get(&sprite)
     }
 
-    pub fn screen_wc(&self, screen_pos: Vec2) -> Vec2 {
-        // Convert screen coordinates to world coordinates using the camera's zoom and offset.
-        let cam_offset = Vec2::new(self.camera.offset.x, self.camera.offset.y);
-        let zoomed_pos = (screen_pos - cam_offset) / self.camera.zoom;
-        let cam_target = Vec2::new(self.camera.target.x, self.camera.target.y);
-        zoomed_pos + cam_target
-    }
+    /// Converts window/screen coordinates to pixel-based WORLD coordinates.
+    /// This is the known-good function from our working test example.
+    pub fn screen_to_world(&self, screen_pos: Vec2) -> Vec2 {
+        // 1. Scale window mouse pos to render texture pos
+        let scale = self.dims.as_vec2() / self.window_dims.as_vec2();
+        let texture_pos = screen_pos * scale;
 
-    pub fn screen_tc(&self, screen_pos: Vec2) -> IVec2 {
-        // Convert screen coordinates to tile coordinates based on the internal rendering resolution.
-        let world_pos = self.screen_wc(screen_pos);
-        IVec2::new(
-            ((world_pos.x / self.dims.x as f32 * self.dims.x as f32) / TILE_SIZE) as i32,
-            ((world_pos.y / self.dims.y as f32 * self.dims.y as f32) / TILE_SIZE) as i32,
-        )
-    }
-
-    pub fn wc_screen(&self, world_pos: Vec2) -> Vec2 {
-        // Convert world coordinates to screen coordinates using the camera's zoom and offset.
+        // 2. Manually perform the inverse camera transform using raw math.
         let cam_target = Vec2::new(self.camera.target.x, self.camera.target.y);
         let cam_offset = Vec2::new(self.camera.offset.x, self.camera.offset.y);
-        (world_pos - cam_target) * self.camera.zoom + cam_offset
+
+        let pos = (texture_pos - cam_offset) / self.camera.zoom + cam_target;
+        // divide by tile_size
+        pos / TILE_SIZE
+    }
+
+    pub fn screen_to_tile(&self, screen_pos: Vec2) -> Vec2 {
+        // Convert screen coordinates to world coordinates
+        let world_pos = self.screen_to_world(screen_pos);
+        // Convert world coordinates to tile coordinates
+        Vec2::new(world_pos.x.floor(), world_pos.y.floor())
+    }
+
+    /// Converts world coordinates back to window/screen coordinates.
+    /// This is the exact inverse of the `screen_to_world` function.
+    pub fn world_to_screen(&self, world_pos: Vec2) -> Vec2 {
+        // The input `world_pos` is in world tile units. First, convert it to world pixel units.
+        let world_pixel_pos = world_pos * TILE_SIZE;
+
+        // Now, perform the forward camera transformation to get the position in render texture space.
+        let cam_target = Vec2::new(self.camera.target.x, self.camera.target.y);
+        let cam_offset = Vec2::new(self.camera.offset.x, self.camera.offset.y);
+        let texture_pos = (world_pixel_pos - cam_target) * self.camera.zoom + cam_offset;
+
+        // Finally, scale from the render texture space to the window space.
+        let scale = self.window_dims.as_vec2() / self.dims.as_vec2();
+        texture_pos * scale
     }
 }
 
@@ -203,4 +218,25 @@ fn load_shader(
     } else {
         Err(format!("Failed to load shader from path: '{}'", path))
     }
+}
+
+fn window_to_tile_coords(
+    window_pos: Vec2,
+    window_dims: Vec2,
+    render_dims: Vec2,
+    camera: Camera2D,
+) -> Vec2 {
+    // Step 1: Scale the mouse coordinate from Window Space to Render Texture Space.
+    let scale = render_dims / window_dims;
+    let texture_coord = window_pos * scale;
+
+    // Step 2: Manually reverse the camera transformation.
+    // This is the algebraic inverse of the transformation that happens when you call `begin_mode2D`.
+    let cam_target = Vec2::new(camera.target.x, camera.target.y);
+    let cam_offset = Vec2::new(camera.offset.x, camera.offset.y);
+
+    // (texture_coord - offset) -> Reverses the offset translation.
+    // (... / zoom)             -> Reverses the zoom scaling.
+    // (... + target)           -> Reverses the target translation.
+    (texture_coord - cam_offset) / camera.zoom + cam_target
 }

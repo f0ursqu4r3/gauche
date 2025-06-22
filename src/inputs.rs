@@ -66,7 +66,7 @@ pub struct PlayingInputs {
     pub up: bool,
     pub down: bool,
 
-    pub mouse_pos: UVec2,
+    pub mouse_pos: Vec2,
     pub mouse_down: [bool; 2],
 }
 impl PlayingInputs {
@@ -77,7 +77,7 @@ impl PlayingInputs {
             up: false,
             down: false,
 
-            mouse_pos: UVec2::new(0, 0),
+            mouse_pos: Vec2::new(0.0, 0.0),
             mouse_down: [false; 2],
         }
     }
@@ -172,7 +172,7 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, _dt: f32) {
     new_inputs.down = kb_down || gp_down;
 
     let raw_mouse_pos = rl.get_mouse_position();
-    new_inputs.mouse_pos = UVec2::new(raw_mouse_pos.x as u32, raw_mouse_pos.y as u32);
+    new_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
 
     state.playing_inputs = new_inputs;
 }
@@ -241,8 +241,9 @@ pub fn process_input_playing(
 
     // Mouse
     let raw_mouse_pos = rl.get_mouse_position();
-    let mouse_tc = graphics.screen_tc(Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y));
-    state.playing_inputs.mouse_pos = UVec2::new(mouse_tc.x as u32, mouse_tc.y as u32);
+    state.playing_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
+    // let mouse_tc = graphics.screen_to_tile(Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y));
+    // state.playing_inputs.mouse_pos = Vec2::new(mouse_tc.x as f32, mouse_tc.y as f32);
     // println!("mouse pos {:?}", mouse_tc);
 
     if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT) {
