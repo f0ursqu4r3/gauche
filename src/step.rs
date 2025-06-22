@@ -112,17 +112,6 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
 
         let target_cam_pos = state.entity_manager.get_entity(player_vid).unwrap().pos * TILE_SIZE;
         graphics.play_cam.pos = graphics.play_cam.pos.lerp(target_cam_pos, 0.1);
-
-        let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
-        if state.playing_inputs.inventory_next {
-            player.selected_inventory_index = (player.selected_inventory_index + 1) % 10;
-        } else if state.playing_inputs.inventory_prev {
-            if player.selected_inventory_index == 0 {
-                player.selected_inventory_index = 10 - 1;
-            } else {
-                player.selected_inventory_index -= 1;
-            }
-        }
     }
 
     // --- Player Tile Logic ---

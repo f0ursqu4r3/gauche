@@ -76,4 +76,5 @@ impl ControlsSettings {
     }
 }
 
-pub const KEY_DEBOUNCE_INTERVAL: f32 = 0.2;
+pub const INVENTORY_SELECTION_DEBOUNCE_INTERVAL: f32 = 0.1;
+pub const MENU_SELECTION_DEBOUNCE_INTERVAL: f32 = 0.2;

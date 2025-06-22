@@ -4,12 +4,10 @@ use raylib::prelude::*;
 use crate::{
     audio::Audio,
     graphics::Graphics,
-    settings::KEY_DEBOUNCE_INTERVAL,
+    settings::INVENTORY_SELECTION_DEBOUNCE_INTERVAL,
     stage::init_playing_state,
     state::{Mode, State},
 };
-
-const JUMP_POWER: f32 = 10.0;
 
 pub fn process_input(
     rl: &mut RaylibHandle,
@@ -127,7 +125,6 @@ pub fn set_mouse_inputs(rl: &mut RaylibHandle, state: &mut State, _dt: f32) {
 }
 
 pub fn set_menu_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
-    let last_inputs = state.menu_inputs;
     let mut new_inputs = MenuInputs::new();
 
     new_inputs.left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT)
@@ -171,66 +168,51 @@ pub fn set_menu_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
     // debounce
     state.menu_input_debounce_timers.step(dt);
     new_inputs = state.menu_input_debounce_timers.debounce(&new_inputs);
-    state
-        .menu_input_debounce_timers
-        .reset_on_diff(&last_inputs, &new_inputs);
+    state.menu_inputs = new_inputs;
 }
 
 pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
-    let last_inputs = state.playing_inputs;
-
-    // Keyboard inputs
-    let kb_up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_W);
-    let kb_down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_S);
-    let kb_left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_A);
-    let kb_right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_D);
-
-    let kb_left_bracket = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT_BRACKET);
-    let kb_right_bracket = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT_BRACKET);
-
-    // Gamepad inputs
-    let mut gp_up = false;
-    let mut gp_down = false;
-    let mut gp_left = false;
-    let mut gp_right = false;
-    let mut gp_left_bracket = false;
-    let mut gp_right_bracket = false;
-
-    if rl.is_gamepad_available(0) {
-        gp_up = rl.is_gamepad_button_down(
-            0,
-            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_UP,
-        );
-        gp_down = rl.is_gamepad_button_down(
-            0,
-            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_DOWN,
-        );
-        gp_left |= rl.is_gamepad_button_down(
+    let mut new_inputs = PlayingInputs::new();
+    new_inputs.left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT)
+        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_A)
+        || rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_LEFT,
         );
-        gp_right = rl.is_gamepad_button_down(
+    new_inputs.right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT)
+        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_D)
+        || rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
         );
-        gp_left_bracket = rl.is_gamepad_button_down(
+    new_inputs.up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_UP)
+        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_W)
+        || rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_UP,
+        );
+    new_inputs.down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_DOWN)
+        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_S)
+        || rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_DOWN,
+        );
+    new_inputs.inventory_prev = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT_BRACKET)
+        || rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_TRIGGER_1,
         );
-        gp_right_bracket = rl.is_gamepad_button_down(
+    new_inputs.inventory_next = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT_BRACKET)
+        || rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_TRIGGER_1,
         );
-    }
+    new_inputs.mouse_down[0] =
+        rl.is_mouse_button_down(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT);
+    new_inputs.mouse_down[1] =
+        rl.is_mouse_button_down(raylib::consts::MouseButton::MOUSE_BUTTON_RIGHT);
 
-    let mut new_inputs = state.playing_inputs;
-    new_inputs.left = kb_left || gp_left;
-    new_inputs.right = kb_right || gp_right;
-    new_inputs.up = kb_up || gp_up;
-    new_inputs.down = kb_down || gp_down;
-
-    new_inputs.inventory_prev = kb_left_bracket || gp_left_bracket;
-    new_inputs.inventory_next = kb_right_bracket || gp_right_bracket;
+    // if rl.is_gamepad_available(0) {
 
     let raw_mouse_pos = rl.get_mouse_position();
     new_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
@@ -238,9 +220,7 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
     // debounce
     state.playing_input_debounce_timers.step(dt);
     new_inputs = state.playing_input_debounce_timers.debounce(&new_inputs);
-    state
-        .playing_input_debounce_timers
-        .reset_on_diff(&last_inputs, &new_inputs);
+    state.playing_inputs = new_inputs;
 }
 
 ////////////////////////    PER GAME MODE INPUT PROCESSING     ////////////////////////
@@ -313,6 +293,24 @@ pub fn process_input_playing(
             }
         }
     }
+
+    // inventory management
+    if let Some(player_vid) = state.player_vid {
+        let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
+        if state.playing_inputs.inventory_next {
+            player.selected_inventory_index = (player.selected_inventory_index + 1) % 10;
+            state.playing_input_debounce_timers.inventory_next =
+                INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
+        } else if state.playing_inputs.inventory_prev {
+            if player.selected_inventory_index == 0 {
+                player.selected_inventory_index = 10 - 1;
+            } else {
+                player.selected_inventory_index -= 1;
+            }
+            state.playing_input_debounce_timers.inventory_prev =
+                INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
+        }
+    }
 }
 
 ////////////////////////    INPUT DEBOUNCE TIMERS    ////////////////////////
@@ -346,27 +344,12 @@ impl MenuInputDebounceTimers {
 
     pub fn debounce(&self, menu_inputs: &MenuInputs) -> MenuInputs {
         MenuInputs {
-            left: self.left > 0.0 && menu_inputs.left,
-            right: self.right > 0.0 && menu_inputs.right,
-            up: self.up > 0.0 && menu_inputs.up,
-            down: self.down > 0.0 && menu_inputs.down,
+            left: self.left == 0.0 && menu_inputs.left,
+            right: self.right == 0.0 && menu_inputs.right,
+            up: self.up == 0.0 && menu_inputs.up,
+            down: self.down == 0.0 && menu_inputs.down,
             confirm: menu_inputs.confirm,
             back: menu_inputs.back,
-        }
-    }
-
-    pub fn reset_on_diff(&mut self, last_inputs: &MenuInputs, new_inputs: &MenuInputs) {
-        if new_inputs.left && !last_inputs.left {
-            self.left = KEY_DEBOUNCE_INTERVAL;
-        }
-        if new_inputs.right && !last_inputs.right {
-            self.right = KEY_DEBOUNCE_INTERVAL;
-        }
-        if new_inputs.up && !last_inputs.up {
-            self.up = KEY_DEBOUNCE_INTERVAL;
-        }
-        if new_inputs.down && !last_inputs.down {
-            self.down = KEY_DEBOUNCE_INTERVAL;
         }
     }
 }
@@ -395,19 +378,10 @@ impl PlayingInputDebounceTimers {
             right: playing_inputs.right,
             up: playing_inputs.up,
             down: playing_inputs.down,
-            inventory_prev: self.inventory_prev > 0.0 && playing_inputs.inventory_prev,
-            inventory_next: self.inventory_next > 0.0 && playing_inputs.inventory_next,
+            inventory_prev: self.inventory_prev == 0.0 && playing_inputs.inventory_prev,
+            inventory_next: self.inventory_next == 0.0 && playing_inputs.inventory_next,
             mouse_pos: playing_inputs.mouse_pos,
             mouse_down: playing_inputs.mouse_down,
-        }
-    }
-
-    pub fn reset_on_diff(&mut self, last_inputs: &PlayingInputs, new_inputs: &PlayingInputs) {
-        if new_inputs.inventory_prev && !last_inputs.inventory_prev {
-            self.inventory_prev = KEY_DEBOUNCE_INTERVAL;
-        }
-        if new_inputs.inventory_next && !last_inputs.inventory_next {
-            self.inventory_next = KEY_DEBOUNCE_INTERVAL;
         }
     }
 }

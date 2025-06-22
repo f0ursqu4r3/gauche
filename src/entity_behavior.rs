@@ -8,7 +8,7 @@ use crate::{
     entity::{swap_step_sound, EntityState, StepSound, VID},
     particle::{ParticleData, ParticleLayer},
     sprite::Sprite,
-    state::{self, get_adjacent_entities, State},
+    state::{get_adjacent_entities, State},
     step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
     tile::is_tile_occupied,
 };
