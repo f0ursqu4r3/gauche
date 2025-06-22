@@ -13,6 +13,7 @@ use crate::{
     entity::{self, EntityType},
     graphics::Graphics,
     particle::{render_particles, ParticleLayer},
+    sprite::Sprite,
     state::{Mode, State},
     tile::get_tile_sprite,
 };
@@ -87,6 +88,9 @@ pub fn render(
             Mode::Win => render_win(state, graphics, &mut screen),
             // Add other states like StageTransition if they exist in the Mode enum
         }
+
+        // draw cursor
+        draw_cursor(state, &mut screen, graphics);
     } // The texture mode ends here automatically.
 
     // After drawing to the texture, we draw the texture itself to the screen.
@@ -310,11 +314,9 @@ pub fn render_playing(
     let entity_count = state.entity_manager.num_active_entities();
     let entity_text = format!("Active Entities: {}", entity_count);
     screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
-    let mouse_position = format!(
-        "Mouse Pos: ({:.2}, {:.2})",
-        { state.playing_inputs.mouse_pos.x },
-        { state.playing_inputs.mouse_pos.y }
-    );
+    let mouse_position = format!("Mouse Pos: ({:.2}, {:.2})", { state.mouse_inputs.pos.x }, {
+        state.mouse_inputs.pos.y
+    });
     screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
 
     // draw inventory if player exists
@@ -459,4 +461,31 @@ pub fn render_health_bar(
             Color::RED,
         );
     }
+}
+// #[derive(Debug, Clone, Copy)]
+// pub struct MouseInputs {
+//     pub left: bool,
+//     pub right: bool,
+//     pub position: IVec2,
+//     pub scroll: f32,
+// }
+/// Draw a cursor at the mouse position.
+/// use sprite Cursor
+pub fn draw_cursor(
+    state: &State,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+    graphics: &Graphics,
+) {
+    let mouse_pos = state.mouse_inputs.pos.as_vec2();
+    let cursor_texture = graphics.get_sprite_texture(Sprite::Cursor);
+    if let Some(texture) = cursor_texture {
+        let cursor_size = Vec2::new(texture.width() as f32, texture.height() as f32);
+        let cursor_pos = mouse_pos - cursor_size / 2.0;
+        screen.draw_texture(
+            texture,
+            cursor_pos.x as i32,
+            cursor_pos.y as i32,
+            Color::WHITE,
+        );
+    };
 }

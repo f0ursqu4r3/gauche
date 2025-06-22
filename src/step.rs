@@ -117,9 +117,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     if let Some(player_vid) = state.player_vid {
         let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
         // check if place block input is pressed
-        if state.playing_inputs.mouse_down.iter().any(|&down| down) {
+        if state.mouse_inputs.left {
             let player_grid_pos = player.pos.as_ivec2();
-            let target_grid_pos = graphics.screen_to_tile(state.playing_inputs.mouse_pos);
+            let target_grid_pos = graphics.screen_to_tile(state.mouse_inputs.pos.as_vec2());
             // Check if the target position is adjacent to the player
             let target_offset = target_grid_pos - player_grid_pos;
             pub const PLAYER_REACH: i32 = 2; // Player can reach 2 tiles away
@@ -127,7 +127,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                 target_offset.x.abs() <= PLAYER_REACH && target_offset.y.abs() <= PLAYER_REACH;
             if in_range {
                 // if mouse 1 is pressed, place a block
-                if state.playing_inputs.mouse_down[0] {
+                if state.mouse_inputs.left {
                     if can_build_on(state, target_grid_pos) {
                         // Place a block at the target position
                         state.stage.set_tile(
@@ -144,7 +144,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                     } else {
                         audio.play_sound_effect(SoundEffect::HitBlock1);
                     }
-                } else if state.playing_inputs.mouse_down[1] {
+                } else if state.mouse_inputs.right {
                     // If mouse 2 is pressed, remove a block
                     state.stage.set_tile(
                         target_grid_pos.x as usize,
@@ -159,7 +159,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                     audio.play_sound_effect(SoundEffect::BlockLand);
                 }
             }
-            state.playing_inputs.mouse_down = [false; 2]; // Reset mouse down states
+            state.mouse_inputs.left = false; // Reset left mouse button state
+            state.mouse_inputs.right = false; // Reset right mouse button state
         }
     }
 

@@ -19,6 +19,9 @@ pub fn process_input(
     graphics: &mut Graphics,
     dt: f32,
 ) {
+    // always update mouse inputs
+    set_mouse_inputs(rl, state, dt);
+
     match state.mode {
         Mode::Playing => set_playing_inputs(rl, state, dt),
         _ => set_menu_inputs(rl, state, dt),
@@ -35,6 +38,25 @@ pub fn process_input(
 }
 
 ////////////////////////    INPUT DEFS    ////////////////////////
+///
+#[derive(Debug, Clone, Copy)]
+pub struct MouseInputs {
+    pub left: bool,
+    pub right: bool,
+    pub pos: IVec2,
+    pub scroll: f32,
+}
+
+impl MouseInputs {
+    pub fn new() -> MouseInputs {
+        MouseInputs {
+            left: false,
+            right: false,
+            pos: IVec2::ZERO,
+            scroll: 0.0,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct MenuInputs {
@@ -65,9 +87,6 @@ pub struct PlayingInputs {
     pub right: bool,
     pub up: bool,
     pub down: bool,
-
-    pub mouse_pos: Vec2,
-    pub mouse_down: [bool; 2],
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -76,14 +95,24 @@ impl PlayingInputs {
             right: false,
             up: false,
             down: false,
-
-            mouse_pos: Vec2::new(0.0, 0.0),
-            mouse_down: [false; 2],
         }
     }
 }
 
 ////////////////////////    STATE INPUT STRUCT FILLING     ////////////////////////
+
+pub fn set_mouse_inputs(rl: &mut RaylibHandle, state: &mut State, _dt: f32) {
+    let raw_mouse_pos = rl.get_mouse_position();
+    let mouse_pos = IVec2::new(raw_mouse_pos.x as i32, raw_mouse_pos.y as i32);
+    let scroll = rl.get_mouse_wheel_move();
+
+    state.mouse_inputs = MouseInputs {
+        left: rl.is_mouse_button_down(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT),
+        right: rl.is_mouse_button_down(raylib::consts::MouseButton::MOUSE_BUTTON_RIGHT),
+        pos: mouse_pos,
+        scroll,
+    };
+}
 
 pub fn set_menu_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
     let last_inputs = state.menu_inputs;
@@ -171,9 +200,6 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, _dt: f32) {
     new_inputs.up = kb_up || gp_up;
     new_inputs.down = kb_down || gp_down;
 
-    let raw_mouse_pos = rl.get_mouse_position();
-    new_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
-
     state.playing_inputs = new_inputs;
 }
 
@@ -237,20 +263,6 @@ pub fn process_input_playing(
 
     if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_EQUAL) {
         graphics.play_cam.zoom = (graphics.play_cam.zoom + 0.25).min(8.0);
-    }
-
-    // Mouse
-    let raw_mouse_pos = rl.get_mouse_position();
-    state.playing_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
-    // let mouse_tc = graphics.screen_to_tile(Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y));
-    // state.playing_inputs.mouse_pos = Vec2::new(mouse_tc.x as f32, mouse_tc.y as f32);
-    // println!("mouse pos {:?}", mouse_tc);
-
-    if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT) {
-        state.playing_inputs.mouse_down[0] = true;
-    }
-    if rl.is_mouse_button_pressed(raylib::consts::MouseButton::MOUSE_BUTTON_RIGHT) {
-        state.playing_inputs.mouse_down[1] = true;
     }
 
     // if i hit space set the player .shake to 1.0
