@@ -143,7 +143,6 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                     } else {
                         audio.play_sound_effect(SoundEffect::HitBlock1);
                     }
-                    state.playing_inputs.mouse_down[0] = false;
                 } else if state.playing_inputs.mouse_down[1] {
                     // If mouse 2 is pressed, remove a block
                     state.stage.set_tile(
@@ -157,9 +156,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                         },
                     );
                     audio.play_sound_effect(SoundEffect::BlockLand);
-                    state.playing_inputs.mouse_down[1] = false;
                 }
             }
+            state.playing_inputs.mouse_down = [false; 2]; // Reset mouse down states
         }
     }
 
