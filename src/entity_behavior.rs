@@ -43,6 +43,42 @@ pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
     };
 }
 
+pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // if entity is player, just return
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        if entity.type_ == crate::entity::EntityType::Player {
+            return; // Player should not growl
+        }
+    }
+
+    pub const GROWL_CHANCE: f32 = 0.0001;
+    if random_range(0.0..1.0) < GROWL_CHANCE {
+        let pos = state.entity_manager.get_entity(vid).unwrap().pos;
+        // play growl sound effect
+        // loudness based on distance to player
+        let sound_loudness =
+            calc_sound_loudness_from_player_dist_falloff(state, pos, BASE_SOUND_HEAR_DISTANCE);
+        if sound_loudness > 0.0 {
+            // randomly pick growl 1 or 2
+            let growl_sound = if random_range(0..2) == 0 {
+                SoundEffect::ZombieGrowl1
+            } else {
+                SoundEffect::ZombieGrowl2
+            };
+            audio.play_sound_effect_scaled(growl_sound, sound_loudness * 0.3);
+        }
+        // shake the entity a little
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            entity.shake = 0.4; // Set shake to a larger value for growl
+        }
+    }
+}
+
 /// Checks if an entity is ready to move based on its cooldown.
 /// Also resets the move cooldown countdown if the entity is ready to move.
 pub fn ready_to_move(state: &mut State, vid: VID) -> bool {
@@ -62,7 +98,7 @@ pub fn reset_move_cooldown(state: &mut State, vid: VID) {
     }
 }
 
-pub const BASE_SOUND_HEAR_DISTANCE: f32 = 64.0;
+pub const BASE_SOUND_HEAR_DISTANCE: f32 = 16.0;
 pub const STEP_SOUND_HEAR_DISTANCE: f32 = 8.0;
 
 pub fn calc_sound_loudness_from_player_dist_falloff(

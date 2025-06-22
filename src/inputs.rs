@@ -257,7 +257,7 @@ pub fn process_input_playing(
     if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SPACE) {
         if let Some(player_vid) = state.player_vid {
             if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
-                player.shake = 0.1;
+                player.shake += 0.1;
             }
         }
     }

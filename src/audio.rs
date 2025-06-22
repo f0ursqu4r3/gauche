@@ -37,6 +37,8 @@ pub enum SoundEffect {
     Step1,
     Step2,
     BlockLand,
+    ZombieGrowl1,
+    ZombieGrowl2,
 }
 
 /// The main struct for managing all game audio. It holds the loaded songs and sounds.
