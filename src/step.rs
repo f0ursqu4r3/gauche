@@ -7,20 +7,19 @@ pub const TIMESTEP: f32 = 1.0 / FRAMES_PER_SECOND as f32;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{Entity, EntityType, StepSound, VID},
+    entity::{Entity, StepSound, VID},
     entity_behavior::{
         die_if_health_zero, growl_sometimes, indiscriminately_attack_nearby, move_entity_on_grid,
-        pick_random_adjacent_tile_position_include_center, ready_to_move, reset_move_cooldown,
-        step_attack_cooldown, wander,
+        ready_to_move, step_attack_cooldown, wander,
     },
     graphics::Graphics,
-    particle::ParticleData,
     render::TILE_SIZE,
-    sprite::Sprite,
     stage::{flip_stage_tiles, TileData},
     state::{Mode, State},
-    tile::{self, can_build_on, is_tile_empty, is_tile_occupied},
+    tile::{self, can_build_on},
 };
+
+pub const PLACE_TILE_COOLDOWN: f32 = 0.05; // Cooldown for placing tiles in seconds
 
 pub fn step(
     rl: &mut RaylibHandle,
@@ -75,6 +74,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         return;
     };
 
+    step_place_tile_cooldown(state);
+
     // Player
     if let Some(player_vid) = state.player_vid {
         if ready_to_move(state, player_vid) {
@@ -114,10 +115,12 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     }
 
     // --- Player Tile Logic ---
+    let ready_to_place = ready_to_place_tile(state);
+    let mut reset_place_tile_cooldown = false;
     if let Some(player_vid) = state.player_vid {
         let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
         // check if place block input is pressed
-        if state.mouse_inputs.left {
+        if ready_to_place && (state.mouse_inputs.left || state.mouse_inputs.right) {
             let player_grid_pos = player.pos.as_ivec2();
             let target_grid_pos = graphics.screen_to_tile(state.mouse_inputs.pos.as_vec2());
             // Check if the target position is adjacent to the player
@@ -141,27 +144,37 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                             },
                         );
                         audio.play_sound_effect(SoundEffect::BlockLand);
-                    } else {
-                        audio.play_sound_effect(SoundEffect::HitBlock1);
+                        reset_place_tile_cooldown = true;
                     }
                 } else if state.mouse_inputs.right {
-                    // If mouse 2 is pressed, remove a block
-                    state.stage.set_tile(
-                        target_grid_pos.x as usize,
-                        target_grid_pos.y as usize,
-                        TileData {
-                            tile: tile::Tile::None,
-                            hp: 0,      // Reset health to 0
-                            variant: 0, // Reset to default empty tile
-                            flip_speed: 0,
-                        },
-                    );
-                    audio.play_sound_effect(SoundEffect::BlockLand);
+                    // if the tile was a block, play sound effect
+                    // and remove it
+                    let tile_type = state
+                        .stage
+                        .get_tile_type(target_grid_pos.x as usize, target_grid_pos.y as usize);
+                    if tile_type.is_some() && tile_type.unwrap() == tile::Tile::Wall {
+                        // Play sound effect for removing a block
+                        audio.play_sound_effect(SoundEffect::BlockLand);
+                        state.stage.set_tile(
+                            target_grid_pos.x as usize,
+                            target_grid_pos.y as usize,
+                            TileData {
+                                tile: tile::Tile::None,
+                                hp: 0,      // Reset health to 0
+                                variant: 0, // Reset to default empty tile
+                                flip_speed: 0,
+                            },
+                        );
+                        reset_place_tile_cooldown = true;
+                    }
                 }
             }
             state.mouse_inputs.left = false; // Reset left mouse button state
             state.mouse_inputs.right = false; // Reset right mouse button state
         }
+    }
+    if reset_place_tile_cooldown {
+        state.place_tile_cooldown_countdown = PLACE_TILE_COOLDOWN;
     }
 
     // --- AI / Other Entity Logic ---
@@ -198,5 +211,21 @@ pub fn entity_shake_attenuation(state: &mut State, vid: VID) {
         entity.shake -= SHAKE_ATTENUATION_RATE
     } else {
         entity.shake = 0.0
+    }
+}
+
+pub fn ready_to_place_tile(state: &State) -> bool {
+    // Check if the cooldown is over
+    if state.place_tile_cooldown_countdown <= 0.0 {
+        return true;
+    }
+    false
+}
+
+pub fn step_place_tile_cooldown(state: &mut State) {
+    if state.place_tile_cooldown_countdown > 0.0 {
+        state.place_tile_cooldown_countdown -= TIMESTEP;
+    } else {
+        state.place_tile_cooldown_countdown = 0.0; // Reset to 0 when cooldown is over
     }
 }

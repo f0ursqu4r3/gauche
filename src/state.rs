@@ -47,6 +47,8 @@ pub struct State {
     pub spatial_grid: Vec<Vec<Vec<VID>>>,
 
     pub rebuild_render_texture: bool,
+
+    pub place_tile_cooldown_countdown: f32,
 }
 
 impl State {
@@ -80,6 +82,8 @@ impl State {
 
             spatial_grid: vec![vec![vec![]; 64]; 64], // Adjust size as needed
             rebuild_render_texture: true,
+
+            place_tile_cooldown_countdown: 0.0,
         }
     }
 
