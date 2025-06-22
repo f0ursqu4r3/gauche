@@ -25,6 +25,28 @@ impl Tile {
     }
 }
 
+/// Check if a tile is walkable and unoccupied by impassable entities.
+pub fn is_tile_walkable(state: &State, tile_coords: IVec2) -> bool {
+    // Check grid bounds first
+    if tile_coords.x < 0
+        || tile_coords.y < 0
+        || tile_coords.x as usize >= state.spatial_grid.len()
+        || tile_coords.y as usize >= state.spatial_grid[0].len()
+    {
+        return false; // Treat out-of-bounds as not buildable.
+    }
+
+    let tile_walkable = match state
+        .stage
+        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+    {
+        Some(tile) => tile.walkable(),
+        None => false, // If the tile doesn't exist, treat it as not walkable.
+    };
+
+    tile_walkable && !is_tile_occupied(state, tile_coords)
+}
+
 /// Check if a tile is unoccupied by impassable entities and can be built on.
 pub fn can_build_on(state: &State, tile_coords: IVec2) -> bool {
     // Check grid bounds first

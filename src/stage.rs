@@ -7,7 +7,7 @@ use crate::{
     graphics::Graphics,
     sprite::Sprite,
     state::State,
-    tile::Tile,
+    tile::{is_tile_empty, is_tile_walkable, Tile},
 };
 
 pub enum StageType {
@@ -25,8 +25,8 @@ impl Stage {
         Self { stage_type, tiles }
     }
 
-    pub fn get_tile(&self, x: usize, y: usize) -> Option<&Tile> {
-        self.tiles.get(x).and_then(|row| row.get(y))
+    pub fn get_tile(&self, x: usize, y: usize) -> Option<Tile> {
+        self.tiles.get(x).and_then(|row| row.get(y)).cloned()
     }
 
     pub fn set_tile(&mut self, x: usize, y: usize, tile: Tile) {
@@ -114,25 +114,27 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     state.player_vid = Some(player_vid);
     let player_grid_pos;
     {
-        let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
-        player.active = true;
-        player.type_ = EntityType::Player;
-        player.sprite = Sprite::Player;
-        player.impassable = true;
-        player.alignment = entity::Alignment::Player;
-        player.move_cooldown = 0.12;
+        // Initialize player entity
+        {
+            let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
+            player.active = true;
+            player.type_ = EntityType::Player;
+            player.sprite = Sprite::Player;
+            player.impassable = true;
+            player.alignment = entity::Alignment::Player;
+            player.move_cooldown = 0.12;
+        }
 
         // Try to spawn player on a walkable tile near the center
         loop {
             let center = state.stage.get_center_position();
             let x = random_range(center.x - 5..center.x + 5);
             let y = random_range(center.y - 5..center.y + 5);
-            if let Some(tile) = state.stage.get_tile(x as usize, y as usize) {
-                if tile.walkable() {
-                    player.pos = IVec2::new(x, y).as_vec2() + Vec2::splat(0.5);
-                    player_grid_pos = player.pos.as_ivec2();
-                    break;
-                }
+            if is_tile_walkable(state, IVec2::new(x as i32, y as i32)) {
+                let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
+                player.pos = IVec2::new(x as i32, y as i32).as_vec2() + Vec2::splat(0.5);
+                player_grid_pos = player.pos.as_ivec2();
+                break;
             }
         }
     }
@@ -144,29 +146,31 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
             {
-                let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
-                zombie.active = true;
-                zombie.type_ = EntityType::Zombie;
-                zombie.sprite = Sprite::Zombie;
-                zombie.impassable = true;
-                zombie.alignment = entity::Alignment::Enemy;
-                zombie.mood = Mood::Wander;
-                zombie.move_cooldown = 0.8;
-                // randomize move cooldown timer in range
-                zombie.move_cooldown_countdown = random_range(0.0..zombie.move_cooldown);
-                // randomize step sound, 1 or 2
-                entity::randomize_step_sound(zombie);
+                // init zombie
+                {
+                    let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
+                    zombie.active = true;
+                    zombie.type_ = EntityType::Zombie;
+                    zombie.sprite = Sprite::Zombie;
+                    zombie.impassable = true;
+                    zombie.alignment = entity::Alignment::Enemy;
+                    zombie.mood = Mood::Wander;
+                    zombie.move_cooldown = 0.8;
+                    // randomize move cooldown timer in range
+                    zombie.move_cooldown_countdown = random_range(0.0..zombie.move_cooldown);
+                    // randomize step sound, 1 or 2
+                    entity::randomize_step_sound(zombie);
+                }
 
+                // place zombie
                 loop {
                     let x = random_range(0..width);
                     let y = random_range(0..height);
-                    if let Some(tile) = state.stage.get_tile(x, y) {
-                        if tile.walkable() {
-                            zombie.pos =
-                                IVec2::new(x as i32, y as i32).as_vec2() + Vec2::splat(0.5);
-                            zombie_grid_pos = zombie.pos.as_ivec2();
-                            break;
-                        }
+                    if is_tile_walkable(state, IVec2::new(x as i32, y as i32)) {
+                        let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
+                        zombie.pos = IVec2::new(x as i32, y as i32).as_vec2() + Vec2::splat(0.5);
+                        zombie_grid_pos = zombie.pos.as_ivec2();
+                        break;
                     }
                 }
             }
