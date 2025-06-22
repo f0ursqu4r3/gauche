@@ -11,12 +11,39 @@ pub enum Tile {
     Water,
 }
 
-pub fn walkable(tile: Tile) -> bool {
-    matches!(tile, Tile::None | Tile::Grass)
+impl Tile {
+    pub fn walkable(self) -> bool {
+        matches!(self, Tile::None | Tile::Grass)
+    }
+
+    pub fn empty(self) -> bool {
+        matches!(self, Tile::None)
+    }
+
+    pub fn can_build_on(self) -> bool {
+        matches!(self, Tile::None | Tile::Grass)
+    }
 }
 
-pub fn empty(tile: Tile) -> bool {
-    matches!(tile, Tile::None)
+/// Check if a tile is unoccupied by impassable entities and can be built on.
+pub fn can_build_on(state: &State, tile_coords: IVec2) -> bool {
+    // Check grid bounds first
+    if tile_coords.x < 0
+        || tile_coords.y < 0
+        || tile_coords.x as usize >= state.spatial_grid.len()
+        || tile_coords.y as usize >= state.spatial_grid[0].len()
+    {
+        return false; // Treat out-of-bounds as not buildable.
+    }
+
+    let tile_buildable_upon = match state
+        .stage
+        .get_tile(tile_coords.x as usize, tile_coords.y as usize)
+    {
+        Some(tile) => tile.can_build_on(),
+        None => false, // If the tile doesn't exist, treat it as not buildable.
+    };
+    tile_buildable_upon && !is_tile_occupied(state, tile_coords)
 }
 
 /// Check if tile is an empty tile and unoccupied by any impassable entities.
@@ -33,7 +60,7 @@ pub fn is_tile_empty(state: &State, tile_coords: IVec2) -> bool {
         .stage
         .get_tile(tile_coords.x as usize, tile_coords.y as usize)
     {
-        Some(tile) => empty(*tile),
+        Some(tile) => tile.empty(),
         None => false, // If the tile doesn't exist, treat it as occupied.
     };
     !is_tile_occupied(state, tile_coords) && tile_empty

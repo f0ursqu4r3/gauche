@@ -1,16 +1,13 @@
-use std::fmt::Alignment;
-
 use glam::{IVec2, Vec2};
-use noise::{NoiseFn, Perlin, Seedable}; // <-- Add noise crate imports
-use rand::{random, random_range}; // <-- Import `random` for seeding
+use noise::{NoiseFn, Perlin};
+use rand::{random, random_range};
 
 use crate::{
     entity::{self, EntityType, Mood},
     graphics::Graphics,
-    render::TILE_SIZE,
     sprite::Sprite,
     state::State,
-    tile::{walkable, Tile},
+    tile::Tile,
 };
 
 pub enum StageType {
@@ -131,7 +128,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             let x = random_range(center.x - 5..center.x + 5);
             let y = random_range(center.y - 5..center.y + 5);
             if let Some(tile) = state.stage.get_tile(x as usize, y as usize) {
-                if walkable(*tile) {
+                if tile.walkable() {
                     player.pos = IVec2::new(x, y).as_vec2() + Vec2::splat(0.5);
                     player_grid_pos = player.pos.as_ivec2();
                     break;
@@ -164,7 +161,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                     let x = random_range(0..width);
                     let y = random_range(0..height);
                     if let Some(tile) = state.stage.get_tile(x, y) {
-                        if walkable(*tile) {
+                        if tile.walkable() {
                             zombie.pos =
                                 IVec2::new(x as i32, y as i32).as_vec2() + Vec2::splat(0.5);
                             zombie_grid_pos = zombie.pos.as_ivec2();

@@ -17,7 +17,7 @@ use crate::{
     render::TILE_SIZE,
     sprite::Sprite,
     state::{Mode, State},
-    tile::{self, is_tile_empty, is_tile_occupied},
+    tile::{self, can_build_on, is_tile_empty, is_tile_occupied},
 };
 
 pub fn step(
@@ -114,11 +114,13 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
             let target_grid_pos = graphics.screen_to_tile(state.playing_inputs.mouse_pos);
             // Check if the target position is adjacent to the player
             let target_offset = target_grid_pos - player_grid_pos;
-            let target_offset_length_squared = target_offset.length_squared();
-            if target_offset_length_squared <= 2 {
+            pub const PLAYER_REACH: i32 = 2; // Player can reach 2 tiles away
+            let in_range =
+                target_offset.x.abs() <= PLAYER_REACH && target_offset.y.abs() <= PLAYER_REACH;
+            if in_range {
                 // if mouse 1 is pressed, place a block
                 if state.playing_inputs.mouse_down[0] {
-                    if is_tile_empty(state, target_grid_pos) {
+                    if can_build_on(state, target_grid_pos) {
                         // Place a block at the target position
                         state.stage.set_tile(
                             target_grid_pos.x as usize,
