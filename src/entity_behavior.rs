@@ -139,19 +139,19 @@ pub fn attack(
         pub const ATTACK_LEAN: f32 = 45.0; // Leaning angle
         if attacker_pos.x < attackee_pos.x {
             // Attacker is to the left of the attacked
-            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = -ATTACK_LEAN;
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = ATTACK_LEAN;
             state.entity_manager.get_entity_mut(*attacked).unwrap().rot = ATTACK_LEAN;
         } else if attacker_pos.x > attackee_pos.x {
             // Attacker is to the right of the attacked
-            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = ATTACK_LEAN;
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = -ATTACK_LEAN;
             state.entity_manager.get_entity_mut(*attacked).unwrap().rot = -ATTACK_LEAN;
         } else if attacker_pos.y < attackee_pos.y {
             // Attacker is above the attacked
-            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = 0.0;
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = 180.0;
             state.entity_manager.get_entity_mut(*attacked).unwrap().rot = 180.0;
         } else {
             // Attacker is below the attacked
-            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = 180.0;
+            state.entity_manager.get_entity_mut(*attacker).unwrap().rot = 0.0;
             state.entity_manager.get_entity_mut(*attacked).unwrap().rot = 0.0;
         }
     }
@@ -226,13 +226,19 @@ pub fn indiscriminately_attack_nearby(state: &mut State, audio: &mut Audio, vid:
         }
     });
 
-    if let Some(vid) = vid_of_adjacent_player {
-        attack(state, audio, vid, vid, AttackType::ZombieScratch);
-    }
-
-    // reset attack cooldown
-    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-        entity.attack_cooldown_countdown = entity.attack_cooldown; // Reset cooldown countdown
+    let attacker_vid = &vid;
+    if let Some(attackee_vid) = vid_of_adjacent_player {
+        attack(
+            state,
+            audio,
+            attacker_vid,
+            attackee_vid,
+            AttackType::ZombieScratch,
+        );
+        // reset attack cooldown
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            entity.attack_cooldown_countdown = entity.attack_cooldown; // Reset cooldown countdown
+        }
     }
 }
 
