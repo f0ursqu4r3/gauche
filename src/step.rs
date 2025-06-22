@@ -48,12 +48,12 @@ pub fn step(
 
         state.particles.step();
         state.scene_frame = state.scene_frame.saturating_add(1);
-    }
 
-    if state.frame == u32::MAX {
-        state.frame = 0;
-    } else {
-        state.frame += 1;
+        if state.frame == u32::MAX {
+            state.frame = 0;
+        } else {
+            state.frame += 1;
+        }
     }
 }
 
