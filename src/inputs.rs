@@ -91,6 +91,17 @@ pub struct PlayingInputs {
 
     pub mouse_pos: Vec2,
     pub mouse_down: [bool; 2],
+
+    pub num_row_1: bool,
+    pub num_row_2: bool,
+    pub num_row_3: bool,
+    pub num_row_4: bool,
+    pub num_row_5: bool,
+    pub num_row_6: bool,
+    pub num_row_7: bool,
+    pub num_row_8: bool,
+    pub num_row_9: bool,
+    pub num_row_0: bool,
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -105,6 +116,17 @@ impl PlayingInputs {
 
             mouse_pos: Vec2::new(0.0, 0.0),
             mouse_down: [false; 2],
+
+            num_row_1: false,
+            num_row_2: false,
+            num_row_3: false,
+            num_row_4: false,
+            num_row_5: false,
+            num_row_6: false,
+            num_row_7: false,
+            num_row_8: false,
+            num_row_9: false,
+            num_row_0: false,
         }
     }
 }
@@ -214,6 +236,36 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
 
     // if rl.is_gamepad_available(0) {
 
+    // num row inputs
+    {
+        new_inputs.num_row_1 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ONE)
+            || rl.is_gamepad_button_pressed(
+                0,
+                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_UP,
+            );
+        new_inputs.num_row_2 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_TWO)
+            || rl.is_gamepad_button_pressed(
+                0,
+                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
+            );
+        new_inputs.num_row_3 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_THREE)
+            || rl.is_gamepad_button_pressed(
+                0,
+                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+            );
+        new_inputs.num_row_4 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_FOUR)
+            || rl.is_gamepad_button_pressed(
+                0,
+                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
+            );
+        new_inputs.num_row_5 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_FIVE);
+        new_inputs.num_row_6 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SIX);
+        new_inputs.num_row_7 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SEVEN);
+        new_inputs.num_row_8 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_EIGHT);
+        new_inputs.num_row_9 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_NINE);
+        new_inputs.num_row_0 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ZERO);
+    }
+
     let raw_mouse_pos = rl.get_mouse_position();
     new_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
 
@@ -307,6 +359,33 @@ pub fn process_input_playing(
                 INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
         }
     }
+
+    // if press num row keys, set inventory selected index
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+            if state.playing_inputs.num_row_1 {
+                player.inventory.set_selected_index(0);
+            } else if state.playing_inputs.num_row_2 {
+                player.inventory.set_selected_index(1);
+            } else if state.playing_inputs.num_row_3 {
+                player.inventory.set_selected_index(2);
+            } else if state.playing_inputs.num_row_4 {
+                player.inventory.set_selected_index(3);
+            } else if state.playing_inputs.num_row_5 {
+                player.inventory.set_selected_index(4);
+            } else if state.playing_inputs.num_row_6 {
+                player.inventory.set_selected_index(5);
+            } else if state.playing_inputs.num_row_7 {
+                player.inventory.set_selected_index(6);
+            } else if state.playing_inputs.num_row_8 {
+                player.inventory.set_selected_index(7);
+            } else if state.playing_inputs.num_row_9 {
+                player.inventory.set_selected_index(8);
+            } else if state.playing_inputs.num_row_0 {
+                player.inventory.set_selected_index(9);
+            }
+        }
+    }
 }
 
 ////////////////////////    INPUT DEBOUNCE TIMERS    ////////////////////////
@@ -378,6 +457,16 @@ impl PlayingInputDebounceTimers {
             inventory_next: self.inventory_next == 0.0 && playing_inputs.inventory_next,
             mouse_pos: playing_inputs.mouse_pos,
             mouse_down: playing_inputs.mouse_down,
+            num_row_1: playing_inputs.num_row_1,
+            num_row_2: playing_inputs.num_row_2,
+            num_row_3: playing_inputs.num_row_3,
+            num_row_4: playing_inputs.num_row_4,
+            num_row_5: playing_inputs.num_row_5,
+            num_row_6: playing_inputs.num_row_6,
+            num_row_7: playing_inputs.num_row_7,
+            num_row_8: playing_inputs.num_row_8,
+            num_row_9: playing_inputs.num_row_9,
+            num_row_0: playing_inputs.num_row_0,
         }
     }
 }
