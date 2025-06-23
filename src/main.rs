@@ -11,6 +11,7 @@ mod particle;
 mod particle_templates;
 mod render;
 mod render_primitives;
+mod render_tiles;
 mod render_ui;
 mod settings;
 mod sprite;

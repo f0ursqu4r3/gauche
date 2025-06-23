@@ -184,7 +184,7 @@ pub fn attack(
     let sprite = attack_sprite_lookup(attack_type);
     state.particles.spawn_static(ParticleData::new(
         particle_pos,
-        Vec2::new(32.0, 32.0),
+        Vec2::new(16.0, 16.0),
         random_range(-45.0..45.0),
         1.0,
         30,

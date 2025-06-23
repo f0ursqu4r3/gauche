@@ -11,6 +11,7 @@ use crate::{
     entity::EntityType,
     graphics::Graphics,
     particle::{render_parallaxing_particles, render_particles, ParticleLayer},
+    render_tiles,
     render_ui::{
         draw_cursor, render_debug_info, render_hand_item, render_health_bar, render_inventory,
         render_item_range_indicator_base, render_item_range_indicator_top,
@@ -197,48 +198,7 @@ pub fn render_playing(
             None
         };
 
-        // --- Draw Tiles ---
-        for y in 0..state.stage.get_height() {
-            'row: for x in 0..state.stage.get_width() {
-                let tile_pixel_pos = Vec2::new(x as f32, y as f32) * TILE_SIZE;
-
-                if let Some(tile_data) = state.stage.get_tile(x, y) {
-                    let sprite = match get_tile_sprite(&tile_data) {
-                        Some(s) => s,
-                        None => continue 'row, // Skip if no sprite found
-                    };
-
-                    if let Some(texture) = graphics.get_sprite_texture(sprite) {
-                        // Calculate alpha based on distance from player
-                        let alpha = if let Some(player_pos) = player_pos_pixels {
-                            let distance = (tile_pixel_pos - player_pos).length();
-                            let tile_distance = (distance / TILE_SIZE).floor() as u32;
-                            let max_steps = (VIEW_DISTANCE / TILE_SIZE) as u32;
-                            let step_alpha = if tile_distance >= max_steps {
-                                0
-                            } else {
-                                // 255 at center, 0 at max_steps
-                                (((max_steps - tile_distance) as f32 / max_steps as f32) * 255.0)
-                                    as u8
-                            };
-                            step_alpha
-                        } else {
-                            255 // If no player, everything is fully visible
-                        };
-
-                        // Only draw if it's visible at all
-                        if alpha > 0 {
-                            d.draw_texture(
-                                texture,
-                                tile_pixel_pos.x as i32,
-                                tile_pixel_pos.y as i32,
-                                Color::new(255, 255, 255, alpha),
-                            );
-                        }
-                    }
-                }
-            }
-        }
+        render_tiles::render_tiles(&mut d, state, graphics, player_pos_pixels);
 
         render_particles(&mut d, state, graphics, ParticleLayer::Background);
 

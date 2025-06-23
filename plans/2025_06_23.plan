@@ -1,5 +1,4 @@
 make the zambies attack nearby attackables?
-* zambies need atack cooldowns
 
 make zambies have directed movement of some sort?
     maybe not all just some
@@ -7,10 +6,6 @@ make zambies have directed movement of some sort?
 
 player die when killed
 objective, money, upgrades etc. needs core gameplay loop
-* player attack of some sort, bow, sword whatever
-
-* bring in our particle effect code
-    * obviously simplify it
 
 bring in some menuing for config
 bring in basic json for saving the config so its not redo ever time on load
@@ -20,8 +15,20 @@ more than one stage?
 
 smoke
 visibility mask
-* clouds?
 fire
-* blood particles
 health bar shake
 health bar spew particles
+
+tiles ability to shake
+add more tiles
+more tile break features like spilling water or acid or fire or oil or something
+add more weapons
+add more items in general
+add more enemies
+    tiny zombie
+    child zombie
+    woman zombie
+    fat zombie
+
+make zombies die when they take damage lol
+verify they are even taking damage
