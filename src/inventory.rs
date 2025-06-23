@@ -13,19 +13,10 @@ pub struct InvEntry {
 
 /// Manages a collection of items, handling the logic for adding, stacking,
 /// swapping, and removing them within a fixed number of slots.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Inventory {
     pub entries: Vec<InvEntry>,
     pub selected_index: usize,
-}
-
-impl Default for Inventory {
-    fn default() -> Self {
-        Self {
-            entries: Vec::new(),
-            selected_index: 0,
-        }
-    }
 }
 
 impl Inventory {
