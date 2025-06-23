@@ -13,6 +13,7 @@ use crate::{
         ready_to_move, step_attack_cooldown, wander,
     },
     graphics::Graphics,
+    particle_templates::spawn_weather_clouds,
     render::TILE_SIZE,
     stage::{flip_stage_tiles, TileData},
     state::{Mode, State},
@@ -196,6 +197,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
 
     // flip tile variants
     flip_stage_tiles(state);
+
+    spawn_weather_clouds(state, graphics, state.cloud_density);
 }
 
 /// Sets entity rotation from -15 to 15 degrees randomly

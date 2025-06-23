@@ -134,3 +134,72 @@ pub fn blood_puddle(particles: &mut Particles, spawn_pos: Vec2, magnitude: f32) 
         particles.spawn_static(particle_data);
     }
 }
+
+/// Spawns clouds that drift slowly across the screen from left to right.
+/// This function should be called every frame.
+///
+/// # Arguments
+/// * `state` - The main game state, used to access particles and camera info.
+/// * `graphics` - The graphics context, needed to determine screen boundaries.
+/// * `cloud_density` - A float from 0.0 (no clouds) to 1.0 (heavy clouds) that
+///                   determines the probability of a new cloud spawning each frame.
+pub fn spawn_weather_clouds(
+    state: &mut State,
+    graphics: &crate::graphics::Graphics,
+    cloud_density: f32,
+) {
+    // --- Cloud Effect :: Tunable Parameters ---
+    const MIN_CLOUD_SPEED: f32 = 0.005;
+    const MAX_CLOUD_SPEED: f32 = 0.015;
+    const MIN_CLOUD_SIZE: f32 = 64.0;
+    const MAX_CLOUD_SIZE: f32 = 256.0;
+    const MIN_CLOUD_ALPHA: f32 = 0.05;
+    const MAX_CLOUD_ALPHA: f32 = 0.1;
+    // A small probability multiplier to make the 0-1 density value feel right.
+    const SPAWN_CHANCE_SCALAR: f32 = 0.02;
+
+    // Determine if a new cloud should spawn on this frame
+    if random_range(0.0..1.0) > cloud_density * SPAWN_CHANCE_SCALAR {
+        return;
+    }
+
+    // --- Calculate Spawn Position & Lifetime ---
+    // Get the camera's view boundaries in world coordinates
+    let top_left_world = graphics.screen_to_world(Vec2::ZERO);
+    let bottom_right_world = graphics.screen_to_world(graphics.window_dims.as_vec2());
+    let screen_width_world = bottom_right_world.x - top_left_world.x;
+
+    // Spawn the cloud just off-screen to the left
+    let spawn_x = top_left_world.x - (MAX_CLOUD_SIZE / 16.0); // Convert pixel size to tile units
+    let spawn_y = random_range(top_left_world.y..bottom_right_world.y);
+    let spawn_pos = Vec2::new(spawn_x, spawn_y);
+
+    let speed = random_range(MIN_CLOUD_SPEED..=MAX_CLOUD_SPEED);
+    // Lifetime is the time it takes to cross the screen plus its own width
+    let lifetime_in_frames = ((screen_width_world + (MAX_CLOUD_SIZE / 16.0)) / speed) as u32;
+
+    // --- Create the Particle ---
+    let sprite = match random_range(0..3) {
+        0 => Sprite::Cloud1,
+        1 => Sprite::Cloud2,
+        _ => Sprite::Cloud3,
+    };
+
+    let size = random_range(MIN_CLOUD_SIZE..=MAX_CLOUD_SIZE);
+    let alpha = random_range(MIN_CLOUD_ALPHA..=MAX_CLOUD_ALPHA);
+
+    let particle_data = ParticleData::new(
+        spawn_pos,
+        Vec2::splat(size),
+        0.0, // No rotation
+        alpha,
+        lifetime_in_frames,
+        sprite,
+        ParticleLayer::Paralaxing { height: 50 },
+    );
+
+    // Clouds have a simple, constant velocity, so we use `spawn_dynamic`.
+    state
+        .particles
+        .spawn_dynamic(particle_data, Vec2::new(speed, 0.0), 0.0);
+}

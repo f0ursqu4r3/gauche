@@ -54,6 +54,7 @@ pub struct State {
     pub rebuild_render_texture: bool,
 
     pub place_tile_cooldown_countdown: f32,
+    pub cloud_density: f32,
 }
 
 impl State {
@@ -91,6 +92,7 @@ impl State {
             rebuild_render_texture: true,
 
             place_tile_cooldown_countdown: 0.0,
+            cloud_density: 0.5,
         }
     }
 

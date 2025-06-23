@@ -33,4 +33,8 @@ pub enum Sprite {
 
     BloodSmall,
     BloodMedium,
+
+    Cloud1,
+    Cloud2,
+    Cloud3,
 }

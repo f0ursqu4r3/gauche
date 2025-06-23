@@ -1,19 +1,16 @@
-// src/particle.rs
-
-use crate::{graphics::Graphics, sprite::Sprite, state::State};
+use crate::{graphics::Graphics, render::TILE_SIZE, sprite::Sprite, state::State};
 use glam::Vec2;
 use raylib::prelude::{Color, RaylibDraw, RaylibDrawHandle, RaylibTextureMode, Rectangle, Vector2};
-
-// --- 1. Common Data & Specific Particle Structs ---
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParticleLayer {
     Background, // Renders below tiles and entities (e.g., footprints, ground effects)
     Foreground, // Renders above everything (e.g., weather, hit effects)
+    Paralaxing {
+        height: i32, // Height
+    }, // Renders above everything else, is parallaxed
 }
 
-/// Contains common data shared by all particle types.
-/// This keeps the memory layout consistent and simplifies access.
 #[derive(Debug, Clone)]
 pub struct ParticleData {
     pub pos: Vec2,
@@ -28,8 +25,6 @@ pub struct ParticleData {
 }
 
 impl ParticleData {
-    /// A convenient constructor for creating particle data.
-    /// Automatically sets `initial_alpha` and `initial_lifetime` from the given values.
     pub fn new(
         pos: Vec2,
         size: Vec2,
@@ -91,8 +86,6 @@ pub struct AnimatedParticle {
     pub vel: Vec2, // Can also have velocity
     pub animation_sprites: Vec<Sprite>,
 }
-
-// --- 2. The Particle Manager ---
 
 /// Manages all active particles in the game.
 /// It holds a separate vector for each particle type to ensure a tight memory layout
@@ -337,4 +330,82 @@ pub fn render_particles(
     draw_accelerated_particles(d, graphics, &state.particles.accelerated_particles, layer);
     draw_spline_particles(d, graphics, &state.particles.spline_particles, layer);
     draw_animated_particles(d, graphics, &state.particles.animated_particles, layer);
+}
+
+/// Renders all particles on the special "Parallaxing" layer.
+/// This function calculates each particle's position on the screen manually,
+/// creating a parallax effect based on its `height` property.
+/// It must be called OUTSIDE of a camera mode.
+pub fn render_parallaxing_particles(d: &mut RaylibDrawHandle, state: &State, graphics: &Graphics) {
+    // --- Tunable parallax scalar ---
+    // A larger value will make the parallax effect more pronounced.
+    const PARALLAX_SCALAR: f32 = 0.005;
+
+    // We need to iterate over all particle types to find the ones on the parallaxing layer.
+    let all_particles = state
+        .particles
+        .static_particles
+        .iter()
+        .map(|p| &p.data)
+        .chain(state.particles.dynamic_particles.iter().map(|p| &p.data))
+        .chain(
+            state
+                .particles
+                .accelerated_particles
+                .iter()
+                .map(|p| &p.data),
+        )
+        .chain(state.particles.spline_particles.iter().map(|p| &p.data))
+        .chain(state.particles.animated_particles.iter().map(|p| &p.data));
+
+    for data in all_particles {
+        if let ParticleLayer::Paralaxing { height } = data.layer {
+            if let Some(texture) = graphics.get_sprite_texture(data.sprite) {
+                // 1. Calculate the parallax factor. Higher 'height' means a stronger effect.
+                let parallax_factor = 1.0 + (height as f32 * PARALLAX_SCALAR);
+
+                // 2. Get camera and particle positions in pixel-space
+                let cam_target_pixels_vector2 = graphics.camera.target; // Already in pixels
+                let cam_target_pixels =
+                    Vec2::new(cam_target_pixels_vector2.x, cam_target_pixels_vector2.y);
+                let pos_pixels = data.pos * TILE_SIZE;
+
+                // 3. Calculate the particle's base offset from the camera's focus point
+
+                let offset_from_cam = pos_pixels - cam_target_pixels;
+
+                // 4. Apply the parallax factor to the offset. This is what creates the effect.
+                let parallaxed_offset = offset_from_cam * parallax_factor;
+
+                // 5. The final screen position is the center of the screen plus the parallaxed offset, all scaled by zoom.
+                let screen_center_vector2 = graphics.camera.offset;
+                let screen_center = Vec2::new(screen_center_vector2.x, screen_center_vector2.y);
+                let final_screen_pos = screen_center + (parallaxed_offset * graphics.camera.zoom);
+
+                // 6. Draw the particle using the calculated screen position
+                let source_rec =
+                    Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
+
+                let final_size = data.size * graphics.camera.zoom;
+
+                let dest_rec = Rectangle::new(
+                    final_screen_pos.x,
+                    final_screen_pos.y,
+                    final_size.x,
+                    final_size.y,
+                );
+
+                let origin = Vector2::new(dest_rec.width / 2.0, dest_rec.height / 2.0);
+
+                d.draw_texture_pro(
+                    texture,
+                    source_rec,
+                    dest_rec,
+                    origin,
+                    data.rot,
+                    Color::new(255, 255, 255, (data.alpha * 255.0) as u8),
+                );
+            }
+        }
+    }
 }

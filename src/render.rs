@@ -12,7 +12,7 @@ use raylib::prelude::*;
 use crate::{
     entity::{self, EntityType},
     graphics::Graphics,
-    particle::{render_particles, ParticleLayer},
+    particle::{render_parallaxing_particles, render_particles, ParticleLayer},
     sprite::Sprite,
     state::{Mode, State},
     tile::get_tile_sprite,
@@ -290,6 +290,7 @@ pub fn render_playing(
         }
 
         render_particles(&mut d, state, graphics, ParticleLayer::Foreground);
+        render_parallaxing_particles(&mut d, state, graphics);
     }
 
     render_health_bar(state, graphics, screen);
