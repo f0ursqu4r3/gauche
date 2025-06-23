@@ -240,6 +240,8 @@ pub fn render_playing(
 
         render_particles(&mut d, state, graphics, ParticleLayer::Background);
 
+        render_item_range_indicator_base(&mut d, state, graphics);
+
         // --- Entity Rendering ---
         for entity in state.entity_manager.iter().filter(|e| e.active) {
             // Player is always fully visible
@@ -291,6 +293,8 @@ pub fn render_playing(
 
         render_particles(&mut d, state, graphics, ParticleLayer::Foreground);
         render_parallaxing_particles(&mut d, state, graphics);
+        render_item_range_indicator_top(&mut d, state, graphics);
+        render_hand_item(&mut d, state, graphics);
     }
 
     render_health_bar(state, graphics, screen);
@@ -356,6 +360,203 @@ pub fn render_win(
 ) {
     screen.clear_background(Color::GOLD);
     screen.draw_text("YOU WIN! (STUB)", 20, 20, 30, Color::WHITE);
+}
+
+/// Render range indicator
+/// just a circle under the player in dark grey, and then with a darker grey outline slightly offset, then a white outline not offset
+/// if the range of the item is zero, then don't render the range indicator; (0 means infinite range)
+pub fn render_item_range_indicator_base(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    state: &State,
+    graphics: &Graphics,
+) {
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            // Get player position in world coordinates
+            let player_pos = player.pos * TILE_SIZE;
+
+            // Get the currently selected item in the inventory
+            if let Some(inv_entry) = player.inventory.selected_entry() {
+                // Check if the item has a range greater than zero
+                if inv_entry.item.range > 0.0 {
+                    // Calculate the range in pixels
+                    let range_pixels = inv_entry.item.range * TILE_SIZE;
+                    // Draw the main range indicator circle
+                    d.draw_circle(
+                        player_pos.x as i32,
+                        player_pos.y as i32,
+                        range_pixels,
+                        Color::new(50, 50, 50, 150), // Dark grey color
+                    );
+                }
+            }
+        }
+    }
+}
+
+pub fn render_item_range_indicator_top(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    state: &State,
+    graphics: &Graphics,
+) {
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            // Get player position in world coordinates
+            let player_pos = player.pos * TILE_SIZE;
+
+            // Get the currently selected item in the inventory
+            if let Some(inv_entry) = player.inventory.selected_entry() {
+                // Check if the item has a range greater than zero
+                if inv_entry.item.range > 0.0 {
+                    // Calculate the range in pixels
+                    let range_pixels = inv_entry.item.range * TILE_SIZE;
+
+                    // use
+                    // /// Draw ring lines
+                    // #[inline]
+                    // fn draw_ring_lines(
+                    //     &mut self,
+                    //     center: impl Into<ffi::Vector2>,
+                    //     inner_radius: f32,
+                    //     outer_radius: f32,
+                    //     start_angle: f32,
+                    //     end_angle: f32,
+                    //     segments: i32,
+                    //     color: impl Into<ffi::Color>,;
+
+                    // Draw a shadow circle directly under the range indicator
+                    const SHADOW_OFFSET: f32 = 1.0;
+                    const CIRCLE_LINE_THICKNESS: f32 = 0.5;
+                    let shadow_color = Color::new(0, 0, 0, 50); // Shadow color
+                    d.draw_ring(
+                        Vector2::new(player_pos.x + SHADOW_OFFSET, player_pos.y + SHADOW_OFFSET),
+                        range_pixels - CIRCLE_LINE_THICKNESS,
+                        range_pixels + CIRCLE_LINE_THICKNESS,
+                        0.0,
+                        360.0,
+                        32, // Number of segments for the circle
+                        shadow_color,
+                    );
+                    // Draw the main range indicator circle
+                    d.draw_ring(
+                        Vector2::new(player_pos.x, player_pos.y),
+                        range_pixels - CIRCLE_LINE_THICKNESS,
+                        range_pixels + CIRCLE_LINE_THICKNESS,
+                        0.0,
+                        360.0,
+                        32,                            // Number of segments for the circle
+                        Color::new(255, 255, 255, 50), // White color
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// Render hand_item
+/// This is a line out from the player to the mouse position
+/// for now just a solid line
+pub fn render_hand_item(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    state: &State,
+    graphics: &Graphics,
+) {
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            // Get the mouse position in world coordinates
+            let mouse_screen_pos = state.mouse_inputs.pos.as_vec2();
+            let mouse_world_pos = graphics.screen_to_world(mouse_screen_pos) * TILE_SIZE;
+            let player_pos = player.pos * TILE_SIZE;
+
+            // draw a shadow line directly under the line
+            const LINE_THICKNESS: f32 = 0.5;
+            let shadow_offset = Vec2::new(0.0, 2.0);
+            d.draw_line_ex(
+                Vector2::new(
+                    player_pos.x + shadow_offset.x,
+                    player_pos.y + shadow_offset.y,
+                ),
+                Vector2::new(
+                    mouse_world_pos.x + shadow_offset.x,
+                    mouse_world_pos.y + shadow_offset.y,
+                ),
+                LINE_THICKNESS,
+                Color::new(0, 0, 0, 100), // Shadow color
+            );
+            // Draw a line from the player to the mouse position
+            d.draw_line_ex(
+                Vector2::new(player_pos.x, player_pos.y),
+                Vector2::new(mouse_world_pos.x, mouse_world_pos.y),
+                LINE_THICKNESS,
+                Color::new(255, 255, 255, 200),
+            );
+
+            /*
+                what is drawn at the hand depends on the item
+                if there is a currently selected item in the inventory
+                then draw the item sprite at the mouse position
+            */
+            if let Some(inv_entry) = player.inventory.selected_entry() {
+                if let Some(sprite) = inv_entry.item.sprite {
+                    // Draw the item sprite at the mouse position
+                    if let Some(texture) = graphics.get_sprite_texture(sprite) {
+                        let dir = (mouse_world_pos - player_pos).normalize_or_zero();
+                        let farthest_pos = inv_entry.item.range * TILE_SIZE * dir + player_pos;
+
+                        // pos is whichever is closer to the player, the mouse or the far position
+                        let pos = if (farthest_pos - player_pos).length()
+                            < (mouse_world_pos - player_pos).length()
+                        {
+                            farthest_pos
+                        } else {
+                            mouse_world_pos
+                        };
+
+                        // keep in mind textures are all different sizes, so determine the size of the texture
+                        let texture_size =
+                            Vec2::new(texture.width() as f32, texture.height() as f32);
+                        const SCALE: f32 = 1.5; // Scale the texture down to fit in the tile
+                        let render_size = Vec2::new(texture_size.x * SCALE, texture_size.y * SCALE);
+                        // scale render size with zoom so that it always appears the same size
+                        let zoom = graphics.play_cam.zoom;
+                        let render_size = render_size * (1.0 / zoom);
+
+                        // determine tint
+                        // based on out of range
+                        // if item has range above zero, and the dist to the mouse is greater than the range, then grey it out
+                        let dist_to_mouse = (mouse_world_pos - player_pos).length();
+                        // let tint = if inv_entry.item.range > 0.0
+                        //     && (dist_to_mouse > inv_entry.item.range * TILE_SIZE)
+                        // {
+                        //     Color::new(50, 50, 50, 200) // Greyed out color
+                        // } else {
+                        //     Color::WHITE // Normal color
+                        // };
+
+                        let tint = Color::WHITE;
+
+                        // Draw the texture at the mouse position
+                        d.draw_texture_pro(
+                            texture,
+                            Rectangle::new(0.0, 0.0, texture_size.x, texture_size.y),
+                            Rectangle::new(pos.x, pos.y, render_size.x, render_size.y),
+                            Vector2::new(render_size.x / 2.0, render_size.y / 2.0),
+                            0.0,
+                            tint,
+                        );
+                    }
+                }
+            }
+
+            // // Optionally, draw a small circle at the mouse position
+            // d.draw_circle(
+            //     mouse_world_pos.x as i32,
+            //     mouse_world_pos.y as i32,
+            //     1.0,
+            //     Color::new(255, 255, 255, 150),
+            // );
+        }
+    }
 }
 
 /// Renders a stylized, offset, angled health bar for the player.

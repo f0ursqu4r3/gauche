@@ -37,7 +37,6 @@ pub struct Item {
     pub range: f32, // in tiles
 
     // --- Associated Game Objects ---
-    pub tile: Option<Tile>,
     pub sprite: Option<Sprite>,
     // pub attributes: Vec<ItemAttributes>,
 }
@@ -59,9 +58,8 @@ impl Item {
                 consume_on_use: true,
                 use_cooldown: 0.1,
                 use_cooldown_countdown: 0.0,
-                range: 1.0, // Walls can be placed on adjacent tiles
-                tile: Some(Tile::Wall),
-                sprite: None,
+                range: 2.0, // Walls can be placed on adjacent tiles
+                sprite: Some(Sprite::Wall),
             },
             ItemType::Medkit => Item {
                 type_: ItemType::Medkit,
@@ -77,7 +75,6 @@ impl Item {
                 use_cooldown: 5.0,
                 use_cooldown_countdown: 0.0,
                 range: 0.0, // Medkits are used on the player, not on tiles
-                tile: None,
                 sprite: None,
             },
             ItemType::Fist => Item {
@@ -94,7 +91,6 @@ impl Item {
                 use_cooldown: 0.5,
                 use_cooldown_countdown: 0.0,
                 range: 1.0, // Fists can hit adjacent tiles
-                tile: None,
                 sprite: Some(Sprite::Fist),
             },
         }

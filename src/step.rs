@@ -17,7 +17,7 @@ use crate::{
     render::TILE_SIZE,
     stage::{flip_stage_tiles, TileData},
     state::{Mode, State},
-    tile::{self, can_build_on},
+    tile::{self, can_build_on, Tile},
 };
 
 pub const PLACE_TILE_COOLDOWN: f32 = 0.05; // Cooldown for placing tiles in seconds
@@ -134,7 +134,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                 if state.mouse_inputs.left {
                     if can_build_on(state, target_grid_pos) {
                         if let Some(mut inv_entry) = player.inventory.selected_entry() {
-                            let tile = inv_entry.item.tile;
+                            // let tile = inv_entry.item.tile;
+                            let tile = Some(Tile::Wall);
                             if inv_entry.item.can_be_placed && tile.is_some() {
                                 // Place a block at the target position
                                 state.stage.set_tile(
