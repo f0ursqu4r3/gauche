@@ -132,7 +132,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                 // if mouse 1 is pressed, place a block
                 if state.mouse_inputs.left {
                     if can_build_on(state, target_grid_pos) {
-                        if let Some(mut inv_entry) = player.selected_inventory_entry() {
+                        if let Some(mut inv_entry) = player.inventory.selected_entry() {
                             let tile = inv_entry.item.tile;
                             if inv_entry.item.can_be_placed && tile.is_some() {
                                 // Place a block at the target position
@@ -148,7 +148,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                                 );
                                 audio.play_sound_effect(SoundEffect::BlockLand);
                                 // Remove one block from the inventory
-                                inv_entry.count -= 1;
+                                // inv_entry.count -= 1;
                                 reset_place_tile_cooldown = true;
                             }
                         }

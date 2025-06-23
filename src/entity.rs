@@ -2,6 +2,8 @@ use glam::{IVec2, Vec2};
 
 use crate::{
     audio::Audio,
+    inventory::Inventory,
+    item::Item,
     sprite::Sprite,
     state::State,
     step::entity_step_sound_lookup,
@@ -139,8 +141,7 @@ pub struct Entity {
     pub attack_cooldown: f32,
     pub attack_cooldown_countdown: f32,
 
-    pub inventory: Vec<InvEntry>,
-    pub selected_inventory_index: usize,
+    pub inventory: Inventory,
 }
 
 impl Entity {
@@ -189,8 +190,7 @@ impl Entity {
             attack_cooldown: 0.0,
             attack_cooldown_countdown: 0.0,
 
-            inventory: Vec::new(),
-            selected_inventory_index: 0,
+            inventory: Inventory::new(),
         }
     }
 
@@ -208,13 +208,6 @@ impl Entity {
         let bottom_right = Vec2::new(self.pos.x + half_size.x, self.pos.y + half_size.y);
         (top_left, bottom_right)
     }
-
-    pub fn selected_inventory_entry(&self) -> Option<InvEntry> {
-        self.inventory
-            .iter()
-            .find(|entry| entry.index == self.selected_inventory_index)
-            .cloned()
-    }
 }
 
 pub fn swap_step_sound(entity: &mut Entity) {
@@ -230,56 +223,4 @@ pub fn randomize_step_sound(entity: &mut Entity) {
     } else {
         StepSound::Step2
     };
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct InvEntry {
-    pub index: usize,
-    pub item: Item,
-    pub count: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ItemType {
-    Wall,
-    Medkit,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Item {
-    pub kind: ItemType,
-    pub name: &'static str,
-    pub description: &'static str,
-    pub can_be_placed: bool,
-    pub can_be_used: bool,
-    pub can_be_dropped: bool,
-    pub tile: Option<tile::Tile>,
-    pub sprite: Option<Sprite>,
-}
-
-impl Item {
-    pub fn new(kind: ItemType) -> Self {
-        match kind {
-            ItemType::Wall => Item {
-                kind: ItemType::Wall,
-                name: "Wall",
-                description: "A solid wall that blocks movement.",
-                can_be_placed: true,
-                can_be_used: false,
-                can_be_dropped: true,
-                tile: Some(tile::Tile::Wall),
-                sprite: None,
-            },
-            ItemType::Medkit => Item {
-                kind: ItemType::Medkit,
-                name: "Medkit",
-                description: "A medkit that restores health.",
-                can_be_placed: false,
-                can_be_used: true,
-                can_be_dropped: true,
-                tile: None,
-                sprite: None,
-            },
-        }
-    }
 }

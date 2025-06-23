@@ -298,11 +298,11 @@ pub fn process_input_playing(
     if let Some(player_vid) = state.player_vid {
         let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
         if state.playing_inputs.inventory_next {
-            player.selected_inventory_index = (player.selected_inventory_index + 1) % 10;
+            player.inventory.increment_selected_index();
             state.playing_input_debounce_timers.inventory_next =
                 INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
         } else if state.playing_inputs.inventory_prev {
-            player.selected_inventory_index = (player.selected_inventory_index + 9) % 10;
+            player.inventory.decrement_selected_index();
             state.playing_input_debounce_timers.inventory_prev =
                 INVENTORY_SELECTION_DEBOUNCE_INTERVAL;
         }

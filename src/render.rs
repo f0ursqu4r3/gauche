@@ -476,7 +476,7 @@ pub fn render_inventory(
                     inv_slots[item.index] = Some(item);
                 }
             }
-            let selected_index = player.selected_inventory_index;
+            let selected_index = player.inventory.selected_index;
             for i in 0..inv_slots.len() {
                 let x = 10;
                 let y = 128 + (i as i32 * 25);
@@ -484,8 +484,8 @@ pub fn render_inventory(
                 if let Some(entry) = inv_slots[i] {
                     let item_name = entry.item.name;
                     let mut item_text = item_name.to_string();
-                    if entry.count > 1 {
-                        item_text = format!("{} x{}", item_text, entry.count);
+                    if entry.item.count > 1 {
+                        item_text = format!("{} x{}", item_text, entry.item.count);
                     }
                     screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
                     selected_rect = Rectangle::new(
