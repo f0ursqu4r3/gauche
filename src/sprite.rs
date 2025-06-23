@@ -28,6 +28,7 @@ pub enum Sprite {
     Zombie,
     ZombieAngry,
     ZombieScratch1,
+    ZombieDead,
     ZombieGib1,
     ZombieFootprint,
 

@@ -10,6 +10,7 @@ mod item_use;
 mod particle;
 mod particle_templates;
 mod render;
+mod render_entities;
 mod render_primitives;
 mod render_tiles;
 mod render_ui;

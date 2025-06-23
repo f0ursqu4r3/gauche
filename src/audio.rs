@@ -27,6 +27,8 @@ pub enum SoundEffect {
     Explosion1,
     Explosion2,
     Explosion3,
+    AnimalCrush1,
+    AnimalCrush2,
     HitBlock1,
     LevelLoss,
     LevelStart,

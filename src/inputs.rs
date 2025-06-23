@@ -17,6 +17,12 @@ pub fn process_input(
     graphics: &mut Graphics,
     dt: f32,
 ) {
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ESCAPE)
+        || rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_Q)
+    {
+        state.running = false;
+    }
+
     // always update mouse inputs
     set_mouse_inputs(rl, state, dt);
 
@@ -30,8 +36,8 @@ pub fn process_input(
         Mode::Settings => {} // process_input_settings_menu(rl, rlt, state, audio, graphics, dt),
         Mode::VideoSettings => {} //{process_input_video_settings_menu(rl, rlt, state, audio, graphics, dt)}
         Mode::Playing => process_input_playing(rl, rlt, state, audio, graphics, dt),
-        Mode::GameOver => {} //process_input_game_over(rl, rlt, state, audio, graphics, dt),
-        Mode::Win => {}      //process_input_win(rl, rlt, state, audio, graphics, dt),
+        Mode::GameOver => process_input_game_over(rl, rlt, state, audio, graphics, dt),
+        Mode::Win => {} //process_input_win(rl, rlt, state, audio, graphics, dt),
     }
 }
 
@@ -305,12 +311,6 @@ pub fn process_input_playing(
     graphics: &mut Graphics,
     _dt: f32,
 ) {
-    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ESCAPE)
-        || rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_Q)
-    {
-        state.running = false;
-    }
-
     // --- Camera Zoom Control (New!) ---
     let wheel_move = rl.get_mouse_wheel_move();
     if wheel_move != 0.0 {
@@ -385,6 +385,26 @@ pub fn process_input_playing(
                 player.inventory.set_selected_index(9);
             }
         }
+    }
+}
+
+// process input game over, on enter or space, go to title
+pub fn process_input_game_over(
+    rl: &mut RaylibHandle,
+    _rlt: &mut RaylibThread,
+    state: &mut State,
+    _audio: &mut Audio,
+    _graphics: &mut Graphics,
+    _dt: f32,
+) {
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ENTER)
+        || rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SPACE)
+        || rl.is_gamepad_button_pressed(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+        )
+    {
+        state.mode = Mode::Title;
     }
 }
 

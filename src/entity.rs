@@ -123,6 +123,7 @@ pub struct Entity {
     pub state: EntityState,
 
     pub health: u32,
+    pub max_hp: u32,
     pub damage_vulnerability: DamageVulnerability,
     pub can_be_stunned: bool,
     pub move_cooldown: f32,
@@ -173,6 +174,7 @@ impl Entity {
             state: EntityState::Idle,
 
             health: 0,
+            max_hp: 0,
             can_be_stunned: false,
             move_cooldown: 0.0,
             move_cooldown_countdown: 0.0,

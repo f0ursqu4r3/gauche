@@ -119,19 +119,17 @@ pub fn use_medkit(
 ) -> bool {
     if let Some(vid) = user_vid {
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-            // Medkit has 0 range, so it always applies to the user.
             const HEAL_AMOUNT: u32 = 25;
-            const MAX_HEALTH: u32 = 100;
 
-            if entity.health < MAX_HEALTH {
-                entity.health = (entity.health + HEAL_AMOUNT).min(MAX_HEALTH);
+            // Use the entity's own max_hp value
+            if entity.health < entity.max_hp {
+                entity.health = (entity.health + HEAL_AMOUNT).min(entity.max_hp);
                 audio.play_sound_effect(SoundEffect::ClothRip);
-                // TODO: Spawn healing particles for visual feedback.
                 return true; // Success
             }
         }
     }
-    false // Use failed (no user, or user at full health)
+    false
 }
 
 /// Attacks an entity or damages a tile at the mouse cursor location.

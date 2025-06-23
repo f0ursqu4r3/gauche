@@ -5,7 +5,7 @@ use rand::random_range;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{swap_step_sound, EntityState, StepSound, VID},
+    entity::{swap_step_sound, EntityState, EntityType, StepSound, VID},
     particle::{ParticleData, ParticleLayer},
     particle_templates::{blood_puddle, blood_splatter},
     sprite::Sprite,
@@ -202,20 +202,6 @@ pub fn attack(
     let attacked_feet_pos = attacked_entity.pos + Vec2::new(0.0, 0.5); // Offset to the feet position
                                                                        // spawn a blood puddle at the feet position
     blood_puddle(&mut state.particles, attacked_feet_pos, magnitude);
-}
-
-pub fn die_if_health_zero(state: &mut State, vid: VID) {
-    // check if exists
-    if state.entity_manager.get_entity(vid).is_none() {
-        return; // Entity not found, exit early
-    }
-
-    // check if health is zero
-    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-        if entity.health == 0 {
-            entity.state = EntityState::Dead;
-        }
-    }
 }
 
 /// check adjacent tiles, if any of them are occupied by an entity with player alignment, attack them.
@@ -465,6 +451,86 @@ pub fn move_entity_on_grid(
     }
 
     moved
+}
+
+/// Spawns death effects (corpse, blood, sound) for a dying entity.
+pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
+    let mut corpse_sprite = Sprite::NoSprite;
+    let mut entity_pos = glam::Vec2::ZERO;
+    let mut entity_rot = 0.0;
+    let mut should_spawn_effects = false;
+
+    // --- Scope 1: Read Data (Immutable Borrow) ---
+    // We get all the info we need from the entity and store it in local variables.
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        corpse_sprite = match entity.type_ {
+            crate::entity::EntityType::Player => Sprite::PlayerDead,
+            crate::entity::EntityType::Zombie => Sprite::ZombieDead,
+            _ => Sprite::NoSprite,
+        };
+        entity_pos = entity.pos;
+        entity_rot = entity.rot;
+        should_spawn_effects = true;
+    }
+    // The immutable borrow of `state` (via `entity`) ends here.
+
+    // --- Scope 2: Apply Effects (Mutable Borrows) ---
+    // Now that the immutable borrow is gone, we can safely mutate `state`.
+    if should_spawn_effects {
+        // 1. Spawn a static particle for the corpse.
+        if corpse_sprite != Sprite::NoSprite {
+            let corpse_data = ParticleData::new(
+                entity_pos,
+                glam::Vec2::splat(16.0), // TILE_SIZE
+                entity_rot,              // Inherit the entity's final rotation
+                1.0,                     // Start fully opaque
+                60 * 15,                 // Lasts for 15 seconds
+                corpse_sprite,
+                ParticleLayer::Background, // Render behind living entities
+            );
+            state.particles.spawn_static(corpse_data);
+        }
+
+        // 2. Play a death sound effect.
+        let death_sound_effect = match state.entity_manager.get_entity(vid).unwrap().type_ {
+            EntityType::None => SoundEffect::BoxBreak,
+            EntityType::Player => SoundEffect::AnimalCrush1,
+            EntityType::Zombie => SoundEffect::AnimalCrush2,
+        };
+        audio.play_sound_effect(death_sound_effect);
+
+        // 3. Spawn blood and gore effects.
+        blood_splatter(
+            state,
+            audio,
+            entity_pos,
+            glam::Vec2::new(0.0, -1.0), // Splatter moves generally upwards
+            0.8,                        // A good amount of splatter
+        );
+        blood_puddle(&mut state.particles, entity_pos, 1.0);
+    }
+}
+
+/// Checks if an entity's health is zero and, if so, marks it for destruction.
+pub fn die_if_health_zero(state: &mut State, audio: &mut Audio, vid: VID) {
+    let mut should_die = false;
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        // Check if health is 0 AND it hasn't already been marked for death.
+        if entity.health == 0 && !entity.marked_for_destruction {
+            should_die = true;
+        }
+    }
+
+    if should_die {
+        // Trigger all the death effects (sound, particles, corpse).
+        on_entity_death(state, audio, vid);
+
+        // Mark the entity for cleanup at the end of the frame.
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            entity.marked_for_destruction = true;
+            entity.state = EntityState::Dead; // Set state for clarity
+        }
+    }
 }
 
 /// given position, pick random position to the left, right, up, or down

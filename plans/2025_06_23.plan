@@ -32,3 +32,5 @@ add more enemies
 
 make zombies die when they take damage lol
 verify they are even taking damage
+
+fix bug with reinit on title after death

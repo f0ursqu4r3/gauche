@@ -40,85 +40,87 @@ pub fn render_inventory(
     const ITEM_TEXT_COLOR: Color = Color::WHITE;
     const HOTKEY_COLOR: Color = Color::new(150, 150, 150, 200);
 
-    if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
-        let entries: std::collections::HashMap<usize, &crate::inventory::InvEntry> = player
-            .inventory
-            .entries
-            .iter()
-            .map(|e| (e.index, e))
-            .collect();
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            let entries: std::collections::HashMap<usize, &crate::inventory::InvEntry> = player
+                .inventory
+                .entries
+                .iter()
+                .map(|e| (e.index, e))
+                .collect();
 
-        // Always loop up to MAX_SLOTS to draw all 10 slots
-        for i in 0..crate::inventory::MAX_SLOTS {
-            let is_selected = i == player.inventory.selected_index;
-            let y_pos = START_Y + (i as f32 * SLOT_SPACING);
+            // Always loop up to MAX_SLOTS to draw all 10 slots
+            for i in 0..crate::inventory::MAX_SLOTS {
+                let is_selected = i == player.inventory.selected_index;
+                let y_pos = START_Y + (i as f32 * SLOT_SPACING);
 
-            // --- 1. Draw Hotkey Number ---
-            // Map index 9 to "0" for the 10th slot, otherwise it's index + 1
-            let hotkey_text = if i == 9 {
-                "0".to_string()
-            } else {
-                (i + 1).to_string()
-            };
-            screen.draw_text(
-                &hotkey_text,
-                (START_X - 20.0) as i32,
-                (y_pos - 10.0) as i32,
-                FONT_SIZE,
-                HOTKEY_COLOR,
-            );
-
-            // --- 2. Calculate position and angle ---
-            let (x_pos, angle) = if is_selected {
-                (START_X + SELECTION_OFFSET_X, SELECTED_ANGLE)
-            } else {
-                (START_X, BASE_ANGLE)
-            };
-
-            // --- 3. Draw Angled Background ---
-            let bg_rect = Rectangle::new(x_pos, y_pos, SLOT_WIDTH, SLOT_HEIGHT);
-            let origin = Vector2::new(0.0, SLOT_HEIGHT / 2.0); // Rotate from left-center
-            screen.draw_rectangle_pro(bg_rect, origin, angle, BG_COLOR);
-
-            // --- 4. Draw Contents (Icon and Text) ---
-            if let Some(entry) = entries.get(&i) {
-                let item = &entry.item;
-
-                let mut text_start_x = x_pos + ICON_PADDING;
-
-                // Draw Icon (if it exists)
-                if let Some(sprite) = item.sprite {
-                    if let Some(texture) = graphics.get_sprite_texture(sprite) {
-                        let icon_pos_x = x_pos + ICON_PADDING;
-                        let icon_pos_y = y_pos - (ICON_SIZE / 2.0);
-                        screen.draw_texture(
-                            texture,
-                            icon_pos_x as i32,
-                            icon_pos_y as i32,
-                            Color::WHITE,
-                        );
-
-                        text_start_x = icon_pos_x + ICON_SIZE + ICON_PADDING;
-                    }
-                }
-
-                // Draw Text
-                let count_text = if item.count > 1 {
-                    format!("x{}", item.count)
+                // --- 1. Draw Hotkey Number ---
+                // Map index 9 to "0" for the 10th slot, otherwise it's index + 1
+                let hotkey_text = if i == 9 {
+                    "0".to_string()
                 } else {
-                    "".to_string()
+                    (i + 1).to_string()
                 };
-                let full_text = format!("{} {}", item.name, count_text);
-                let text_y_pos = y_pos - (FONT_SIZE as f32 / 2.0);
                 screen.draw_text(
-                    &full_text,
-                    text_start_x as i32,
-                    text_y_pos as i32,
+                    &hotkey_text,
+                    (START_X - 20.0) as i32,
+                    (y_pos - 10.0) as i32,
                     FONT_SIZE,
-                    ITEM_TEXT_COLOR,
+                    HOTKEY_COLOR,
                 );
+
+                // --- 2. Calculate position and angle ---
+                let (x_pos, angle) = if is_selected {
+                    (START_X + SELECTION_OFFSET_X, SELECTED_ANGLE)
+                } else {
+                    (START_X, BASE_ANGLE)
+                };
+
+                // --- 3. Draw Angled Background ---
+                let bg_rect = Rectangle::new(x_pos, y_pos, SLOT_WIDTH, SLOT_HEIGHT);
+                let origin = Vector2::new(0.0, SLOT_HEIGHT / 2.0); // Rotate from left-center
+                screen.draw_rectangle_pro(bg_rect, origin, angle, BG_COLOR);
+
+                // --- 4. Draw Contents (Icon and Text) ---
+                if let Some(entry) = entries.get(&i) {
+                    let item = &entry.item;
+
+                    let mut text_start_x = x_pos + ICON_PADDING;
+
+                    // Draw Icon (if it exists)
+                    if let Some(sprite) = item.sprite {
+                        if let Some(texture) = graphics.get_sprite_texture(sprite) {
+                            let icon_pos_x = x_pos + ICON_PADDING;
+                            let icon_pos_y = y_pos - (ICON_SIZE / 2.0);
+                            screen.draw_texture(
+                                texture,
+                                icon_pos_x as i32,
+                                icon_pos_y as i32,
+                                Color::WHITE,
+                            );
+
+                            text_start_x = icon_pos_x + ICON_SIZE + ICON_PADDING;
+                        }
+                    }
+
+                    // Draw Text
+                    let count_text = if item.count > 1 {
+                        format!("x{}", item.count)
+                    } else {
+                        "".to_string()
+                    };
+                    let full_text = format!("{} {}", item.name, count_text);
+                    let text_y_pos = y_pos - (FONT_SIZE as f32 / 2.0);
+                    screen.draw_text(
+                        &full_text,
+                        text_start_x as i32,
+                        text_y_pos as i32,
+                        FONT_SIZE,
+                        ITEM_TEXT_COLOR,
+                    );
+                }
+                // If the slot is empty, we simply don't draw anything inside it.
             }
-            // If the slot is empty, we simply don't draw anything inside it.
         }
     }
 }
@@ -230,19 +232,21 @@ pub fn render_item_range_indicator_base(
 ) {
     const RANGE_INDICATOR_COLOR: Color = Color::new(40, 40, 40, 40);
 
-    if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
-        if let Some(inv_entry) = player.inventory.selected_entry() {
-            let min_range = inv_entry.item.min_range.round() as i32;
-            let max_range = inv_entry.item.range.round() as i32;
-            let player_tile_pos = player.pos.as_ivec2();
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            if let Some(inv_entry) = player.inventory.selected_entry() {
+                let min_range = inv_entry.item.min_range.round() as i32;
+                let max_range = inv_entry.item.range.round() as i32;
+                let player_tile_pos = player.pos.as_ivec2();
 
-            draw_manhattan_ring_fill(
-                d,
-                player_tile_pos,
-                min_range,
-                max_range,
-                RANGE_INDICATOR_COLOR,
-            );
+                draw_manhattan_ring_fill(
+                    d,
+                    player_tile_pos,
+                    min_range,
+                    max_range,
+                    RANGE_INDICATOR_COLOR,
+                );
+            }
         }
     }
 }
@@ -255,21 +259,22 @@ pub fn render_item_range_indicator_top(
 ) {
     const BORDER_COLOR: Color = Color::new(255, 255, 255, 40);
     const BORDER_THICKNESS: f32 = 1.0;
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            if let Some(inv_entry) = player.inventory.selected_entry() {
+                let min_range = inv_entry.item.min_range.round() as i32;
+                let max_range = inv_entry.item.range.round() as i32;
+                let player_tile_pos = player.pos.as_ivec2();
 
-    if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
-        if let Some(inv_entry) = player.inventory.selected_entry() {
-            let min_range = inv_entry.item.min_range.round() as i32;
-            let max_range = inv_entry.item.range.round() as i32;
-            let player_tile_pos = player.pos.as_ivec2();
-
-            draw_manhattan_ring_outline(
-                d,
-                player_tile_pos,
-                min_range,
-                max_range,
-                BORDER_THICKNESS,
-                BORDER_COLOR,
-            );
+                draw_manhattan_ring_outline(
+                    d,
+                    player_tile_pos,
+                    min_range,
+                    max_range,
+                    BORDER_THICKNESS,
+                    BORDER_COLOR,
+                );
+            }
         }
     }
 }
@@ -425,6 +430,11 @@ pub fn render_selected_item_details(
     const STAT_VALUE_COLOR: Color = Color::WHITE;
     const STATUS_READY_COLOR: Color = Color::new(120, 220, 120, 255);
     const STATUS_COOLDOWN_COLOR: Color = Color::new(220, 180, 120, 255);
+
+    // just return if no player vid
+    if state.player_vid.is_none() {
+        return;
+    }
 
     let selected_item =
         if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {

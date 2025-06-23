@@ -208,6 +208,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             player.alignment = entity::Alignment::Player;
             player.move_cooldown = 0.12;
             player.health = 100;
+            player.max_hp = 100;
 
             let mut wall_item = Item::new(ItemType::Wall);
             wall_item.count = 99; // Start with 99 walls
@@ -250,6 +251,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                     zombie.mood = Mood::Wander;
                     zombie.move_cooldown = 0.8;
                     zombie.attack_cooldown = 1.0;
+                    zombie.health = 40;
+                    zombie.max_hp = 40;
                     // randomize move cooldown timer in range
                     zombie.move_cooldown_countdown = random_range(0.0..zombie.move_cooldown);
                     // randomize step sound, 1 or 2

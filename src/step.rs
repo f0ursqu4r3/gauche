@@ -174,7 +174,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         entity_shake_attenuation(state, vid);
         growl_sometimes(state, audio, vid);
         indiscriminately_attack_nearby(state, audio, vid);
-        die_if_health_zero(state, vid);
+        die_if_health_zero(state, audio, vid);
         step_attack_cooldown(state, vid);
         step_inventory_item_cooldowns(state, vid);
     }
@@ -183,6 +183,29 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     flip_stage_tiles(state);
 
     spawn_weather_clouds(state, graphics, state.cloud_density);
+
+    // --- Entity Cleanup ("Sweep" Phase) ---
+    // At the very end of the step, we remove all entities that were marked for destruction.
+    let vids_to_remove: Vec<(VID, IVec2)> = state
+        .entity_manager
+        .iter()
+        .filter(|e| e.marked_for_destruction && e.active)
+        .map(|e| (e.vid, e.pos.as_ivec2()))
+        .collect();
+
+    for (vid, pos) in vids_to_remove {
+        // Remove from the spatial grid to prevent ghost collisions
+        state.remove_entity_from_grid(vid, pos);
+        // Deactivate the entity in the manager, freeing up its ID
+        state.entity_manager.set_inactive_vid(vid);
+
+        // If the player died, update the game state accordingly
+        if let Some(player_vid) = state.player_vid {
+            if player_vid == vid {
+                state.player_vid = None;
+            }
+        }
+    }
 }
 
 /// Sets entity rotation from -15 to 15 degrees randomly

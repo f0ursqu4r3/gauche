@@ -11,7 +11,7 @@ use crate::{
     entity::EntityType,
     graphics::Graphics,
     particle::{render_parallaxing_particles, render_particles, ParticleLayer},
-    render_tiles,
+    render_entities, render_tiles,
     render_ui::{
         draw_cursor, render_debug_info, render_hand_item, render_health_bar, render_inventory,
         render_item_range_indicator_base, render_item_range_indicator_top,
@@ -204,54 +204,7 @@ pub fn render_playing(
 
         render_item_range_indicator_base(&mut d, state, graphics);
 
-        // --- Entity Rendering ---
-        for entity in state.entity_manager.iter().filter(|e| e.active) {
-            // Player is always fully visible
-            let alpha = if entity.type_ == EntityType::Player {
-                255
-            } else if let Some(player_pos) = player_pos_pixels {
-                // Other entities fade based on distance
-                get_alpha_from_distance(player_pos, entity.pos * TILE_SIZE, VIEW_DISTANCE)
-            } else {
-                255 // If no player, everything is fully visible
-            };
-
-            // Only draw if visible
-            if alpha > 0 {
-                if let Some(texture) = graphics.get_sprite_texture(entity.sprite) {
-                    let entity_pixel_pos = entity.pos * TILE_SIZE;
-                    let source_rec =
-                        Rectangle::new(0.0, 0.0, texture.width() as f32, texture.height() as f32);
-                    // apply shake
-                    let position = if entity.shake == 0.0 {
-                        entity_pixel_pos
-                    } else {
-                        // Apply shake offset
-                        let shake_offset = entity.shake * TILE_SIZE;
-                        // random offset in x and y
-                        let shake_x = random_range(-shake_offset..shake_offset);
-                        let shake_y = random_range(-shake_offset..shake_offset);
-                        // Apply shake to position
-                        let shake_offset = Vec2::new(shake_x, shake_y);
-                        Vec2::new(
-                            entity_pixel_pos.x + shake_offset.x,
-                            entity_pixel_pos.y + shake_offset.y,
-                        )
-                    };
-
-                    let dest_rec = Rectangle::new(position.x, position.y, TILE_SIZE, TILE_SIZE);
-                    let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
-                    d.draw_texture_pro(
-                        texture,
-                        source_rec,
-                        dest_rec,
-                        origin,
-                        entity.rot,
-                        Color::new(255, 255, 255, alpha),
-                    );
-                }
-            }
-        }
+        render_entities::render_entities(&mut d, state, graphics, player_pos_pixels);
 
         render_particles(&mut d, state, graphics, ParticleLayer::Foreground);
         render_parallaxing_particles(&mut d, state, graphics);
