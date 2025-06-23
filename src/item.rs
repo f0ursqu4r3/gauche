@@ -4,6 +4,7 @@ use crate::{item, item_use::use_item, sprite::Sprite, tile::Tile};
 pub enum ItemType {
     Wall,
     Medkit,
+    Fist,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -13,6 +14,7 @@ pub enum ItemAttributes {
     Durable,
     Fragile,
     Heavy, // makes you slow
+    Big,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -45,7 +47,7 @@ impl Item {
             ItemType::Wall => Item {
                 type_: ItemType::Wall,
                 name: "Wall",
-                description: "A solid wall that blocks movement.",
+                description: "...a wall",
                 marked_for_destruction: false,
                 can_be_placed: true,
                 usable: false,
@@ -61,7 +63,7 @@ impl Item {
             ItemType::Medkit => Item {
                 type_: ItemType::Medkit,
                 name: "Medkit",
-                description: "A medkit that restores health.",
+                description: "first aid, second aid, cool-aid",
                 marked_for_destruction: false,
                 can_be_placed: false,
                 usable: true,
@@ -73,6 +75,22 @@ impl Item {
                 use_cooldown_countdown: 0.0,
                 tile: None,
                 sprite: None,
+            },
+            ItemType::Fist => Item {
+                type_: ItemType::Fist,
+                name: "Fist",
+                description: "your fist",
+                marked_for_destruction: false,
+                can_be_placed: false,
+                usable: true,
+                can_be_dropped: true,
+                consume_on_use: false,
+                max_count: 1, // Fists are not stackable
+                count: 1,     // Always 1 for fists
+                use_cooldown: 0.5,
+                use_cooldown_countdown: 0.0,
+                tile: None,
+                sprite: Some(Sprite::Fist),
             },
         }
     }

@@ -37,4 +37,7 @@ pub enum Sprite {
     Cloud1,
     Cloud2,
     Cloud3,
+
+    // Item Sprites
+    Fist,
 }

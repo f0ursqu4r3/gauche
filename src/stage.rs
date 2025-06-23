@@ -201,6 +201,9 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             wall_item.count = 99; // Start with 99 walls
 
             player.inventory.insert(wall_item);
+
+            let mut fist_item = Item::new(ItemType::Fist);
+            player.inventory.insert(fist_item);
         }
 
         // Try to spawn player on a walkable tile near the center

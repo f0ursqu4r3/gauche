@@ -55,6 +55,10 @@ pub fn use_item_internal_lookup(
     match item.type_ {
         ItemType::Wall => use_wall(state, audio, dt, user_vid, item),
         ItemType::Medkit => use_medkit(state, audio, dt, user_vid, item),
+        _ => {
+            // For other item types, you can add more specific logic here
+            println!("Using item: {:?}", item.type_);
+        }
     }
 }
 
