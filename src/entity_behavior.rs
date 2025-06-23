@@ -93,17 +93,20 @@ pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackType {
+    FistPunch,
     ZombieScratch,
 }
 
 pub fn attack_sprite_lookup(attack_type: AttackType) -> Sprite {
     match attack_type {
+        AttackType::FistPunch => Sprite::Fist,
         AttackType::ZombieScratch => Sprite::ZombieScratch1,
     }
 }
 
 pub fn attack_sound_lookup(attack_type: AttackType) -> SoundEffect {
     match attack_type {
+        AttackType::FistPunch => SoundEffect::Punch1, // Using fist punch sound as attack sound
         AttackType::ZombieScratch => SoundEffect::ZombieScratch1, // Using scratch sound as attack sound
     }
 }
@@ -124,14 +127,12 @@ pub fn attack(
     }
 
     // play sound effect based on attack type
-    match attack_type {
-        AttackType::ZombieScratch => {
-            audio.play_sound_effect(attack_sound_lookup(attack_type));
-        }
-    }
+    let sound_effect = attack_sound_lookup(attack_type);
+    audio.play_sound_effect(sound_effect);
 
     // get strength of attack, lets say zombie scratch is 1
     let attack_strength = match attack_type {
+        AttackType::FistPunch => 10,    // Fist punch deals 10 damage
         AttackType::ZombieScratch => 5, // Zombie scratch deals 1 damage
     };
     let attacker_pos = state.entity_manager.get_entity(*attacker).unwrap().pos;
@@ -275,6 +276,23 @@ pub fn step_attack_cooldown(state: &mut State, vid: VID) {
     if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
         if entity.attack_cooldown_countdown > 0.0 {
             entity.attack_cooldown_countdown -= TIMESTEP;
+        }
+    }
+}
+
+/// Step inventory item cooldowns for an entity.
+pub fn step_inventory_item_cooldowns(state: &mut State, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // Step through the entity's inventory and reduce cooldowns
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        for item in &mut entity.inventory.iter_mut_items() {
+            if item.use_cooldown_countdown > 0.0 {
+                item.use_cooldown_countdown -= TIMESTEP;
+            }
         }
     }
 }

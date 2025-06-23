@@ -21,6 +21,8 @@ pub enum StageType {
 pub struct TileData {
     pub tile: Tile,
     pub hp: u8,
+    pub max_hp: u8,
+    pub breakable: bool,
     pub variant: u8,
     pub flip_speed: u16,
 }
@@ -38,6 +40,8 @@ impl Stage {
                 TileData {
                     tile: Tile::None,
                     hp: 0,
+                    max_hp: 0,
+                    breakable: false,
                     variant: 0,
                     flip_speed: 0,
                 };
@@ -77,6 +81,8 @@ impl Stage {
                 *tile = TileData {
                     tile: Tile::None,
                     hp: 0,
+                    max_hp: 0,
+                    breakable: false,
                     variant: 0,
                     flip_speed: 0,
                 };
@@ -145,6 +151,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                     TileData {
                         tile: Tile::Grass,
                         hp: 0,
+                        max_hp: 0,
+                        breakable: false,
                         variant: 0,
                         flip_speed: 0,
                     },
@@ -156,6 +164,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                     TileData {
                         tile: Tile::Water,
                         hp: 0,
+                        max_hp: 0,
+                        breakable: false,
                         variant: // randomize water variant
                             if random::<bool>() {
                                 0 // Variant 0 for water
@@ -172,6 +182,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                     TileData {
                         tile: Tile::None,
                         hp: 0,
+                        max_hp: 0,
+                        breakable: false,
                         variant: 0,
                         flip_speed: 0,
                     },
@@ -275,6 +287,8 @@ pub fn flip_stage_tiles(state: &mut State) {
                         TileData {
                             tile: tile_data.tile,
                             hp: tile_data.hp,
+                            max_hp: tile_data.max_hp,
+                            breakable: tile_data.breakable,
                             variant: new_variant,
                             flip_speed: tile_data.flip_speed,
                         },

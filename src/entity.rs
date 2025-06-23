@@ -65,7 +65,8 @@ pub enum DrawLayer {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DamageType {
-    Attack,
+    Punch,
+    Scratch,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

@@ -203,3 +203,48 @@ pub fn spawn_weather_clouds(
         .particles
         .spawn_dynamic(particle_data, Vec2::new(speed, 0.0), 0.0);
 }
+
+/// Spawns a generic debris effect using the provided sprite.
+/// Good for tile damage, things breaking, etc.
+pub fn debris_splatter(
+    particles: &mut Particles,
+    spawn_pos: Vec2,
+    base_direction: Vec2,
+    debris_sprite: Sprite,
+) {
+    // --- Debris Splatter :: Tunable Parameters ---
+    const CONE_ANGLE: f32 = 90.0;
+    const GRAVITY: f32 = 0.018;
+    const NUM_PARTICLES: u32 = 8;
+    const MIN_SIZE: f32 = 1.0;
+    const MAX_SIZE: f32 = 4.0;
+    const MIN_SPEED: f32 = 0.04;
+    const MAX_SPEED: f32 = 0.1;
+    const MIN_LIFETIME: u32 = 8;
+    const MAX_LIFETIME: u32 = 20;
+
+    for _ in 0..NUM_PARTICLES {
+        let size = random_range(MIN_SIZE..=MAX_SIZE);
+        let initial_speed = random_range(MIN_SPEED..=MAX_SPEED);
+        let lifetime = random_range(MIN_LIFETIME..=MAX_LIFETIME);
+
+        let angle_offset = random_range(-CONE_ANGLE..=CONE_ANGLE);
+        let direction_rad = base_direction.y.atan2(base_direction.x) + angle_offset.to_radians();
+        let final_direction = Vec2::new(direction_rad.cos(), direction_rad.sin());
+
+        let vel = final_direction * initial_speed;
+        let acc = Vec2::new(0.0, GRAVITY);
+
+        let particle_data = ParticleData::new(
+            spawn_pos,
+            Vec2::splat(size),
+            random_range(0.0..360.0), // Give it a random rotation
+            1.0,
+            lifetime,
+            debris_sprite,
+            ParticleLayer::Foreground,
+        );
+
+        particles.spawn_accelerated(particle_data, vel, acc);
+    }
+}

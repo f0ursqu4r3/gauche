@@ -10,9 +10,10 @@ use crate::{
     entity::{self, Entity, StepSound, VID},
     entity_behavior::{
         die_if_health_zero, growl_sometimes, indiscriminately_attack_nearby, move_entity_on_grid,
-        ready_to_move, step_attack_cooldown, wander,
+        ready_to_move, step_attack_cooldown, step_inventory_item_cooldowns, wander,
     },
     graphics::Graphics,
+    item::Item,
     particle_templates::spawn_weather_clouds,
     render::TILE_SIZE,
     stage::{flip_stage_tiles, TileData},
@@ -66,7 +67,6 @@ fn step_title(state: &mut State, _audio: &mut Audio) {
     }
 }
 
-/// Handles tile-based gameplay logic by operating on entities.
 fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     // game over if no player
     if state.player_vid.is_none() {
@@ -75,9 +75,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         return;
     };
 
-    step_place_tile_cooldown(state);
-
-    // Player
+    // --- Player Movement ---
     if let Some(player_vid) = state.player_vid {
         if ready_to_move(state, player_vid) {
             let player_tile_pos = state
@@ -115,75 +113,59 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         graphics.play_cam.pos = graphics.play_cam.pos.lerp(target_cam_pos, 0.1);
     }
 
-    // --- Player Tile Logic ---
-    let ready_to_place = ready_to_place_tile(state);
-    let mut reset_place_tile_cooldown = false;
-    if let Some(player_vid) = state.player_vid {
-        let player = state.entity_manager.get_entity(player_vid).unwrap();
-        // check if place block input is pressed
-        if ready_to_place && (state.mouse_inputs.left || state.mouse_inputs.right) {
-            let player_grid_pos = player.pos.as_ivec2();
-            let target_grid_pos = graphics.screen_to_tile(state.mouse_inputs.pos.as_vec2());
-            // Check if the target position is adjacent to the player
-            let target_offset = target_grid_pos - player_grid_pos;
-            pub const PLAYER_REACH: i32 = 2; // Player can reach 2 tiles away
-            let in_range =
-                target_offset.x.abs() <= PLAYER_REACH && target_offset.y.abs() <= PLAYER_REACH;
-            if in_range {
-                // if mouse 1 is pressed, place a block
-                if state.mouse_inputs.left {
-                    if can_build_on(state, target_grid_pos) {
-                        if let Some(mut inv_entry) = player.inventory.selected_entry() {
-                            // let tile = inv_entry.item.tile;
-                            let tile = Some(Tile::Wall);
-                            if inv_entry.item.can_be_placed && tile.is_some() {
-                                // Place a block at the target position
-                                state.stage.set_tile(
-                                    target_grid_pos.x as usize,
-                                    target_grid_pos.y as usize,
-                                    TileData {
-                                        tile: tile.unwrap_or(tile::Tile::None),
-                                        hp: 100,    // Example: full health for the block
-                                        variant: 0, // Example: default wall variant
-                                        flip_speed: 0,
-                                    },
-                                );
-                                audio.play_sound_effect(SoundEffect::BlockLand);
-                                // Remove one block from the inventory
-                                // inv_entry.count -= 1;
-                                reset_place_tile_cooldown = true;
-                            }
+    // --- Player Item Use Logic ---
+    if state.mouse_inputs.left {
+        if let Some(player_vid) = state.player_vid {
+            let mut temp_item: Option<Item> = None;
+            let mut selected_index = 0;
+
+            // Scope 1: Get the item out of the inventory.
+            // This borrows `state` mutably, but the borrow ends when the scope does.
+            if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                selected_index = player.inventory.selected_index;
+                if let Some(entry) = player.inventory.get_mut(selected_index) {
+                    // Temporarily replace the item in the inventory with a dummy placeholder.
+                    // We take ownership of the real item we want to use.
+                    temp_item = Some(std::mem::replace(
+                        &mut entry.item,
+                        Item::new(crate::item::ItemType::Fist), // A dummy item
+                    ));
+                }
+            } // Mutable borrow of `state` via `player` ends here.
+
+            // Scope 2: Use the item.
+            // We can now borrow `state` again because the previous borrow is gone.
+            if let Some(mut item_to_use) = temp_item {
+                // Call the use function with the item we took.
+                crate::item_use::use_item(
+                    state,
+                    graphics,
+                    audio,
+                    Some(player_vid),
+                    &mut item_to_use,
+                );
+
+                // Scope 3: Put the item back (or handle its destruction).
+                // This is another, separate mutable borrow of `state`.
+                if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                    if item_to_use.marked_for_destruction {
+                        // The item was used up, so we remove its entry from the inventory.
+                        player
+                            .inventory
+                            .entries
+                            .retain(|e| e.index != selected_index);
+                    } else {
+                        // The item was not used up, so find the entry (which now holds the dummy)
+                        // and put the real item back.
+                        if let Some(entry) = player.inventory.get_mut(selected_index) {
+                            entry.item = item_to_use;
                         }
-                    }
-                } else if state.mouse_inputs.right {
-                    // if the tile was a block, play sound effect
-                    // and remove it
-                    let tile_type = state
-                        .stage
-                        .get_tile_type(target_grid_pos.x as usize, target_grid_pos.y as usize);
-                    if tile_type.is_some() && tile_type.unwrap() == tile::Tile::Wall {
-                        // Play sound effect for removing a block
-                        audio.play_sound_effect(SoundEffect::BlockLand);
-                        state.stage.set_tile(
-                            target_grid_pos.x as usize,
-                            target_grid_pos.y as usize,
-                            TileData {
-                                tile: tile::Tile::None,
-                                hp: 0,      // Reset health to 0
-                                variant: 0, // Reset to default empty tile
-                                flip_speed: 0,
-                            },
-                        );
-                        reset_place_tile_cooldown = true;
                     }
                 }
             }
-            state.mouse_inputs.left = false; // Reset left mouse button state
-            state.mouse_inputs.right = false; // Reset right mouse button state
         }
-    }
-    if reset_place_tile_cooldown {
-        state.place_tile_cooldown_countdown = PLACE_TILE_COOLDOWN;
+        // Consume the click so it doesn't trigger again next frame.
+        state.mouse_inputs.left = false;
     }
 
     // --- AI / Other Entity Logic ---
@@ -194,6 +176,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         indiscriminately_attack_nearby(state, audio, vid);
         die_if_health_zero(state, vid);
         step_attack_cooldown(state, vid);
+        step_inventory_item_cooldowns(state, vid);
     }
 
     // flip tile variants
@@ -222,21 +205,5 @@ pub fn entity_shake_attenuation(state: &mut State, vid: VID) {
         entity.shake -= SHAKE_ATTENUATION_RATE
     } else {
         entity.shake = 0.0
-    }
-}
-
-pub fn ready_to_place_tile(state: &State) -> bool {
-    // Check if the cooldown is over
-    if state.place_tile_cooldown_countdown <= 0.0 {
-        return true;
-    }
-    false
-}
-
-pub fn step_place_tile_cooldown(state: &mut State) {
-    if state.place_tile_cooldown_countdown > 0.0 {
-        state.place_tile_cooldown_countdown -= TIMESTEP;
-    } else {
-        state.place_tile_cooldown_countdown = 0.0; // Reset to 0 when cooldown is over
     }
 }

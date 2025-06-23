@@ -36,10 +36,13 @@ pub enum SoundEffect {
     SuperConfirm,
     Step1,
     Step2,
+    BoxBreak,
     BlockLand,
     ZombieGrowl1,
     ZombieGrowl2,
     ZombieScratch1,
+    Punch1,
+    ClothRip,
 }
 
 /// The main struct for managing all game audio. It holds the loaded songs and sounds.

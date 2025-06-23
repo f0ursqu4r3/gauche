@@ -91,7 +91,7 @@ impl Item {
                 consume_on_use: false,
                 max_count: 1, // Fists are not stackable
                 count: 1,     // Always 1 for fists
-                use_cooldown: 0.5,
+                use_cooldown: 0.2,
                 use_cooldown_countdown: 0.0,
                 min_range: 1.0, // Fists can hit the same tile
                 range: 1.0,     // Fists can hit adjacent tiles
