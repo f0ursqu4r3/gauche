@@ -34,7 +34,8 @@ pub struct Item {
     pub use_cooldown: f32,           // cooldown in seconds after using this item
     pub use_cooldown_countdown: f32, // countdown for the cooldown
 
-    pub range: f32, // in tiles
+    pub min_range: f32, // in tiles, minimum range for use
+    pub range: f32,     // in tiles
 
     // --- Associated Game Objects ---
     pub sprite: Option<Sprite>,
@@ -58,7 +59,8 @@ impl Item {
                 consume_on_use: true,
                 use_cooldown: 0.1,
                 use_cooldown_countdown: 0.0,
-                range: 2.0, // Walls can be placed on adjacent tiles
+                min_range: 1.0, // Walls can be placed on the same tile
+                range: 2.0,     // Walls can be placed on adjacent tiles
                 sprite: Some(Sprite::Wall),
             },
             ItemType::Medkit => Item {
@@ -74,7 +76,8 @@ impl Item {
                 count: 1, // Will be set below
                 use_cooldown: 5.0,
                 use_cooldown_countdown: 0.0,
-                range: 0.0, // Medkits are used on the player, not on tiles
+                min_range: 0.0, // Medkits are used on the player, not on tiles
+                range: 0.0,     // Medkits are used on the player, not on tiles
                 sprite: None,
             },
             ItemType::Fist => Item {
@@ -90,7 +93,8 @@ impl Item {
                 count: 1,     // Always 1 for fists
                 use_cooldown: 0.5,
                 use_cooldown_countdown: 0.0,
-                range: 1.0, // Fists can hit adjacent tiles
+                min_range: 1.0, // Fists can hit the same tile
+                range: 1.0,     // Fists can hit adjacent tiles
                 sprite: Some(Sprite::Fist),
             },
         }

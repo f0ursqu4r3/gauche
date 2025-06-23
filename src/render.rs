@@ -12,8 +12,9 @@ use crate::{
     graphics::Graphics,
     particle::{render_parallaxing_particles, render_particles, ParticleLayer},
     render_ui::{
-        draw_cursor, render_hand_item, render_health_bar, render_inventory,
+        draw_cursor, render_debug_info, render_hand_item, render_health_bar, render_inventory,
         render_item_range_indicator_base, render_item_range_indicator_top,
+        render_selected_item_details,
     },
     state::{Mode, State},
     tile::get_tile_sprite,
@@ -299,34 +300,11 @@ pub fn render_playing(
     }
 
     render_health_bar(state, graphics, screen);
-
-    // --- UI / Debug Text Rendering ---
-    // (UI rendering code remains unchanged)
-    let player_pos_text = if let Some(player_vid) = state.player_vid {
-        if let Some(player) = state.entity_manager.get_entity(player_vid) {
-            format!(
-                "Player Pos: ({:.2}, {:.2})",
-                player.pos.x as i32, player.pos.y as i32
-            )
-        } else {
-            "Player: <DEAD>".to_string()
-        }
-    } else {
-        "Player: <NONE>".to_string()
-    };
-    screen.draw_text(&player_pos_text, 10, 10, 20, Color::WHITE);
-    let zoom_text = format!("Zoom: {:.2}x (Mouse Wheel)", graphics.play_cam.zoom);
-    screen.draw_text(&zoom_text, 10, 35, 20, Color::WHITE);
-    let entity_count = state.entity_manager.num_active_entities();
-    let entity_text = format!("Active Entities: {}", entity_count);
-    screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
-    let mouse_position = format!("Mouse Pos: ({:.2}, {:.2})", { state.mouse_inputs.pos.x }, {
-        state.mouse_inputs.pos.y
-    });
-    screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
+    // render_debug_info(state, graphics, screen);
 
     // draw inventory
     render_inventory(state, graphics, screen);
+    render_selected_item_details(state, graphics, screen);
 }
 
 // --- Stub Functions ---

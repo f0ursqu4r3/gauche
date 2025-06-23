@@ -8,7 +8,10 @@ use raylib::{
 use crate::{
     graphics::Graphics,
     render::TILE_SIZE,
-    render_primitives::{draw_manhattan_range_fill, draw_manhattan_range_outline},
+    render_primitives::{
+        draw_manhattan_range_fill, draw_manhattan_range_outline, draw_manhattan_ring_fill,
+        draw_manhattan_ring_outline,
+    },
     sprite::Sprite,
     state::State,
     utils::new_york_dist,
@@ -16,45 +19,106 @@ use crate::{
 
 pub fn render_inventory(
     state: &State,
-    _graphics: &Graphics,
+    graphics: &Graphics,
     screen: &mut RaylibTextureMode<RaylibDrawHandle>,
 ) {
-    if let Some(player_vid) = state.player_vid {
-        if let Some(player) = state.entity_manager.get_entity(player_vid) {
-            let mut inv_slots = vec![None; 10];
-            for item in player.inventory.iter() {
-                if item.index < inv_slots.len() {
-                    inv_slots[item.index] = Some(item);
-                }
-            }
-            let selected_index = player.inventory.selected_index;
-            for i in 0..inv_slots.len() {
-                let x = 10;
-                let y = 128 + (i as i32 * 25);
-                let selected_rect;
-                if let Some(entry) = inv_slots[i] {
-                    let item_name = entry.item.name;
-                    let mut item_text = item_name.to_string();
-                    if entry.item.count > 1 {
-                        item_text = format!("{} x{}", item_text, entry.item.count);
+    // --- UI Layout & Style Constants ---
+    const START_X: f32 = 40.0; // Pushed right to make space for hotkeys
+    const START_Y: f32 = 120.0;
+    const SLOT_WIDTH: f32 = 200.0;
+    const SLOT_HEIGHT: f32 = 30.0;
+    const SLOT_SPACING: f32 = 35.0;
+    const SELECTION_OFFSET_X: f32 = 25.0;
+    const ICON_SIZE: f32 = 24.0;
+    const ICON_PADDING: f32 = (SLOT_HEIGHT - ICON_SIZE) / 2.0;
+    const FONT_SIZE: i32 = 20;
+
+    const BASE_ANGLE: f32 = -2.0;
+    const SELECTED_ANGLE: f32 = 1.0; // Selected item has a different angle
+
+    const BG_COLOR: Color = Color::new(10, 10, 10, 180);
+    const ITEM_TEXT_COLOR: Color = Color::WHITE;
+    const HOTKEY_COLOR: Color = Color::new(150, 150, 150, 200);
+
+    if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
+        let entries: std::collections::HashMap<usize, &crate::inventory::InvEntry> = player
+            .inventory
+            .entries
+            .iter()
+            .map(|e| (e.index, e))
+            .collect();
+
+        // Always loop up to MAX_SLOTS to draw all 10 slots
+        for i in 0..crate::inventory::MAX_SLOTS {
+            let is_selected = i == player.inventory.selected_index;
+            let y_pos = START_Y + (i as f32 * SLOT_SPACING);
+
+            // --- 1. Draw Hotkey Number ---
+            // Map index 9 to "0" for the 10th slot, otherwise it's index + 1
+            let hotkey_text = if i == 9 {
+                "0".to_string()
+            } else {
+                (i + 1).to_string()
+            };
+            screen.draw_text(
+                &hotkey_text,
+                (START_X - 20.0) as i32,
+                (y_pos - 10.0) as i32,
+                FONT_SIZE,
+                HOTKEY_COLOR,
+            );
+
+            // --- 2. Calculate position and angle ---
+            let (x_pos, angle) = if is_selected {
+                (START_X + SELECTION_OFFSET_X, SELECTED_ANGLE)
+            } else {
+                (START_X, BASE_ANGLE)
+            };
+
+            // --- 3. Draw Angled Background ---
+            let bg_rect = Rectangle::new(x_pos, y_pos, SLOT_WIDTH, SLOT_HEIGHT);
+            let origin = Vector2::new(0.0, SLOT_HEIGHT / 2.0); // Rotate from left-center
+            screen.draw_rectangle_pro(bg_rect, origin, angle, BG_COLOR);
+
+            // --- 4. Draw Contents (Icon and Text) ---
+            if let Some(entry) = entries.get(&i) {
+                let item = &entry.item;
+
+                let mut text_start_x = x_pos + ICON_PADDING;
+
+                // Draw Icon (if it exists)
+                if let Some(sprite) = item.sprite {
+                    if let Some(texture) = graphics.get_sprite_texture(sprite) {
+                        let icon_pos_x = x_pos + ICON_PADDING;
+                        let icon_pos_y = y_pos - (ICON_SIZE / 2.0);
+                        screen.draw_texture(
+                            texture,
+                            icon_pos_x as i32,
+                            icon_pos_y as i32,
+                            Color::WHITE,
+                        );
+
+                        text_start_x = icon_pos_x + ICON_SIZE + ICON_PADDING;
                     }
-                    screen.draw_text(&item_text, x as i32, y as i32, 20, Color::WHITE);
-                    selected_rect = Rectangle::new(
-                        x as f32 - 6.0,
-                        y as f32 - 2.0,
-                        screen.measure_text(&item_text, 20) as f32 + 12.0,
-                        24.0,
-                    );
-                } else {
-                    screen.draw_text("-", x as i32, y as i32, 20, Color::GRAY);
-                    selected_rect = Rectangle::new(x as f32 - 6.0, y as f32 - 2.0, 64.0, 24.0);
                 }
 
-                // Draw selection rectangle
-                if i == selected_index {
-                    screen.draw_rectangle_lines_ex(selected_rect, 2.0, Color::WHITE);
-                }
+                // Draw Text
+                let count_text = if item.count > 1 {
+                    format!("x{}", item.count)
+                } else {
+                    "".to_string()
+                };
+                let full_text = format!("{} {}", item.name, count_text);
+                let text_y_pos = y_pos - (FONT_SIZE as f32 / 2.0);
+                screen.draw_text(
+                    &full_text,
+                    text_start_x as i32,
+                    text_y_pos as i32,
+                    FONT_SIZE,
+                    ITEM_TEXT_COLOR,
+                );
             }
+            // If the slot is empty, we simply don't draw anything inside it.
         }
     }
 }
@@ -159,7 +223,6 @@ pub fn render_health_bar(
 }
 
 /// Renders a semi-transparent overlay on all tiles within the player's item range.
-/// This is a wrapper around the generic `draw_manhattan_range_fill` function.
 pub fn render_item_range_indicator_base(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
     state: &State,
@@ -169,15 +232,22 @@ pub fn render_item_range_indicator_base(
 
     if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
         if let Some(inv_entry) = player.inventory.selected_entry() {
-            let range = inv_entry.item.range.round() as i32;
+            let min_range = inv_entry.item.min_range.round() as i32;
+            let max_range = inv_entry.item.range.round() as i32;
             let player_tile_pos = player.pos.as_ivec2();
-            draw_manhattan_range_fill(d, player_tile_pos, range, RANGE_INDICATOR_COLOR);
+
+            draw_manhattan_ring_fill(
+                d,
+                player_tile_pos,
+                min_range,
+                max_range,
+                RANGE_INDICATOR_COLOR,
+            );
         }
     }
 }
 
 /// Renders a crisp outline around the border of the item's effective range.
-/// This is a wrapper around the generic `draw_manhattan_range_outline` function.
 pub fn render_item_range_indicator_top(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
     state: &State,
@@ -188,9 +258,18 @@ pub fn render_item_range_indicator_top(
 
     if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
         if let Some(inv_entry) = player.inventory.selected_entry() {
-            let range = inv_entry.item.range.round() as i32;
+            let min_range = inv_entry.item.min_range.round() as i32;
+            let max_range = inv_entry.item.range.round() as i32;
             let player_tile_pos = player.pos.as_ivec2();
-            draw_manhattan_range_outline(d, player_tile_pos, range, BORDER_THICKNESS, BORDER_COLOR);
+
+            draw_manhattan_ring_outline(
+                d,
+                player_tile_pos,
+                min_range,
+                max_range,
+                BORDER_THICKNESS,
+                BORDER_COLOR,
+            );
         }
     }
 }
@@ -257,6 +336,257 @@ pub fn render_hand_item(
                     }
                 }
             }
+        }
+    }
+}
+
+pub fn render_debug_info(
+    state: &State,
+    graphics: &Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    // --- UI / Debug Text Rendering ---
+    // (UI rendering code remains unchanged)
+    let player_pos_text = if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            format!(
+                "Player Pos: ({:.2}, {:.2})",
+                player.pos.x as i32, player.pos.y as i32
+            )
+        } else {
+            "Player: <DEAD>".to_string()
+        }
+    } else {
+        "Player: <NONE>".to_string()
+    };
+    screen.draw_text(&player_pos_text, 10, 10, 20, Color::WHITE);
+    let zoom_text = format!("Zoom: {:.2}x (Mouse Wheel)", graphics.play_cam.zoom);
+    screen.draw_text(&zoom_text, 10, 35, 20, Color::WHITE);
+    let entity_count = state.entity_manager.num_active_entities();
+    let entity_text = format!("Active Entities: {}", entity_count);
+    screen.draw_text(&entity_text, 10, 60, 20, Color::WHITE);
+    let mouse_position = format!("Mouse Pos: ({:.2}, {:.2})", { state.mouse_inputs.pos.x }, {
+        state.mouse_inputs.pos.y
+    });
+    screen.draw_text(&mouse_position, 10, 85, 20, Color::WHITE);
+}
+
+// This helper function handles word-wrapping for the description text.
+fn draw_text_wrapped(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    text: &str,
+    mut x: f32,
+    mut y: f32,
+    max_width: f32,
+    font_size: i32,
+    line_spacing: f32,
+    color: Color,
+) {
+    let mut current_line = String::new();
+    for word in text.split_whitespace() {
+        let test_line = if current_line.is_empty() {
+            word.to_string()
+        } else {
+            format!("{} {}", current_line, word)
+        };
+
+        if d.measure_text(&test_line, font_size) as f32 > max_width {
+            d.draw_text(&current_line, x as i32, y as i32, font_size, color);
+            y += font_size as f32 + line_spacing;
+            current_line = word.to_string();
+        } else {
+            current_line = test_line;
+        }
+    }
+    d.draw_text(&current_line, x as i32, y as i32, font_size, color);
+}
+
+/// Renders a details panel for the currently selected item on the right side of the screen.
+pub fn render_selected_item_details(
+    state: &State,
+    graphics: &Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    // --- UI Layout & Style Constants ---
+    const PANEL_WIDTH: f32 = 250.0;
+    const PANEL_PADDING: f32 = 15.0;
+    const PANEL_ANGLE: f32 = 1.5;
+    const BG_COLOR: Color = Color::new(10, 10, 10, 200);
+
+    const TITLE_FONT_SIZE: i32 = 24;
+    const DESC_FONT_SIZE: i32 = 18;
+    const STAT_FONT_SIZE: i32 = 16;
+    const LINE_SPACING: f32 = 5.0;
+    const SECTION_SPACING: f32 = 15.0;
+
+    const TITLE_COLOR: Color = Color::WHITE;
+    const DESC_COLOR: Color = Color::new(180, 180, 180, 255);
+    const STAT_KEY_COLOR: Color = Color::new(150, 150, 150, 255);
+    const STAT_VALUE_COLOR: Color = Color::WHITE;
+    const STATUS_READY_COLOR: Color = Color::new(120, 220, 120, 255);
+    const STATUS_COOLDOWN_COLOR: Color = Color::new(220, 180, 120, 255);
+
+    let selected_item =
+        if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
+            player.inventory.selected_entry().map(|entry| entry.item)
+        } else {
+            None
+        };
+
+    if let Some(item) = selected_item {
+        let x_pos = graphics.dims.x as f32 - PANEL_WIDTH - 30.0;
+        let y_pos = 120.0;
+        let panel_height = graphics.dims.y as f32 - y_pos - 30.0;
+
+        screen.draw_rectangle_pro(
+            Rectangle::new(x_pos, y_pos, PANEL_WIDTH, panel_height),
+            Vector2::zero(),
+            PANEL_ANGLE,
+            BG_COLOR,
+        );
+
+        let mut current_y = y_pos + PANEL_PADDING;
+        let content_x = x_pos + PANEL_PADDING;
+        let content_width = PANEL_WIDTH - (PANEL_PADDING * 2.0);
+
+        // 1. Item Name (Title) & Count (if stackable)
+        let title_text = if item.max_count > 1 {
+            format!("{} ({} / {})", item.name, item.count, item.max_count)
+        } else {
+            item.name.to_string()
+        };
+        screen.draw_text(
+            &title_text,
+            content_x as i32,
+            current_y as i32,
+            TITLE_FONT_SIZE,
+            TITLE_COLOR,
+        );
+        current_y += TITLE_FONT_SIZE as f32 + LINE_SPACING * 2.0;
+
+        // 2. Item Description
+        draw_text_wrapped(
+            screen,
+            item.description,
+            content_x,
+            current_y,
+            content_width,
+            DESC_FONT_SIZE,
+            LINE_SPACING,
+            DESC_COLOR,
+        );
+        let desc_lines = (item.description.len() as f32 / 25.0).ceil();
+        current_y += desc_lines * (DESC_FONT_SIZE as f32 + LINE_SPACING) + SECTION_SPACING;
+
+        // --- Core Stats ---
+        {
+            let value = format!("{} - {}", item.min_range, item.range);
+            let key_text = "Range: ";
+            screen.draw_text(
+                key_text,
+                content_x as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_KEY_COLOR,
+            );
+            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
+            screen.draw_text(
+                &value,
+                (content_x + key_width) as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_VALUE_COLOR,
+            );
+            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
+        }
+        {
+            let value = format!("{:.1}s", item.use_cooldown);
+            let key_text = "Cooldown: ";
+            screen.draw_text(
+                key_text,
+                content_x as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_KEY_COLOR,
+            );
+            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
+            screen.draw_text(
+                &value,
+                (content_x + key_width) as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_VALUE_COLOR,
+            );
+            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
+        }
+
+        // --- Status (Live Cooldown) ---
+        let (status_text, status_color) = if item.use_cooldown_countdown > 0.0 {
+            (
+                format!("{:.1}s", item.use_cooldown_countdown),
+                STATUS_COOLDOWN_COLOR,
+            )
+        } else {
+            ("Ready".to_string(), STATUS_READY_COLOR)
+        };
+        let status_key_text = "Status: ";
+        screen.draw_text(
+            status_key_text,
+            content_x as i32,
+            current_y as i32,
+            STAT_FONT_SIZE,
+            STAT_KEY_COLOR,
+        );
+        let key_width = screen.measure_text(status_key_text, STAT_FONT_SIZE) as f32;
+        screen.draw_text(
+            &status_text,
+            (content_x + key_width) as i32,
+            current_y as i32,
+            STAT_FONT_SIZE,
+            status_color,
+        );
+        current_y += STAT_FONT_SIZE as f32 + SECTION_SPACING;
+
+        // --- Properties (Booleans) ---
+        {
+            let value = if item.consume_on_use { "Yes" } else { "No" };
+            let key_text = "Consumable: ";
+            screen.draw_text(
+                key_text,
+                content_x as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_KEY_COLOR,
+            );
+            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
+            screen.draw_text(
+                value,
+                (content_x + key_width) as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_VALUE_COLOR,
+            );
+            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
+        }
+        {
+            let value = if item.can_be_dropped { "Yes" } else { "No" };
+            let key_text = "Droppable: ";
+            screen.draw_text(
+                key_text,
+                content_x as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_KEY_COLOR,
+            );
+            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
+            screen.draw_text(
+                value,
+                (content_x + key_width) as i32,
+                current_y as i32,
+                STAT_FONT_SIZE,
+                STAT_VALUE_COLOR,
+            );
+            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
         }
     }
 }

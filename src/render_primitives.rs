@@ -98,3 +98,103 @@ pub fn draw_manhattan_range_outline(
         }
     }
 }
+
+/// Generic helper to draw a filled "ring" based on an inclusive min and max Manhattan distance.
+pub fn draw_manhattan_ring_fill(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    center_tile: glam::IVec2,
+    min_range: i32,
+    max_range: i32,
+    color: Color,
+) {
+    if max_range < 0 || min_range > max_range {
+        return;
+    }
+
+    for x_offset in -max_range..=max_range {
+        for y_offset in -max_range..=max_range {
+            let current_tile = center_tile + glam::IVec2::new(x_offset, y_offset);
+            let dist = new_york_dist(center_tile, current_tile);
+
+            // CORRECTED LOGIC: Use >= to make the minimum range inclusive.
+            if dist >= min_range && dist <= max_range {
+                d.draw_rectangle(
+                    current_tile.x * TILE_SIZE as i32,
+                    current_tile.y * TILE_SIZE as i32,
+                    TILE_SIZE as i32,
+                    TILE_SIZE as i32,
+                    color,
+                );
+            }
+        }
+    }
+}
+
+/// Generic helper to draw an outline around a Manhattan distance "ring".
+pub fn draw_manhattan_ring_outline(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    center_tile: glam::IVec2,
+    min_range: i32,
+    max_range: i32,
+    thickness: f32,
+    color: Color,
+) {
+    if max_range < 0 || min_range > max_range {
+        return;
+    }
+
+    for x_offset in -max_range..=max_range {
+        for y_offset in -max_range..=max_range {
+            let current_pos = center_tile + glam::IVec2::new(x_offset, y_offset);
+            let dist = new_york_dist(center_tile, current_pos);
+
+            // Check if the current tile is itself in the valid ring.
+            if dist >= min_range && dist <= max_range {
+                let top_left_px = Vector2::new(
+                    current_pos.x as f32 * TILE_SIZE,
+                    current_pos.y as f32 * TILE_SIZE,
+                );
+                let top_right_px = Vector2::new(
+                    (current_pos.x + 1) as f32 * TILE_SIZE,
+                    current_pos.y as f32 * TILE_SIZE,
+                );
+                let bottom_left_px = Vector2::new(
+                    current_pos.x as f32 * TILE_SIZE,
+                    (current_pos.y + 1) as f32 * TILE_SIZE,
+                );
+                let bottom_right_px = Vector2::new(
+                    (current_pos.x + 1) as f32 * TILE_SIZE,
+                    (current_pos.y + 1) as f32 * TILE_SIZE,
+                );
+
+                // A border is drawn if the neighbor is outside the valid ring.
+                // CORRECTED LOGIC: Check against the inclusive min_range and max_range.
+
+                // Check neighbor ABOVE
+                let neighbor_above_dist =
+                    new_york_dist(center_tile, current_pos + glam::IVec2::new(0, -1));
+                if neighbor_above_dist < min_range || neighbor_above_dist > max_range {
+                    d.draw_line_ex(top_left_px, top_right_px, thickness, color);
+                }
+                // Check neighbor BELOW
+                let neighbor_below_dist =
+                    new_york_dist(center_tile, current_pos + glam::IVec2::new(0, 1));
+                if neighbor_below_dist < min_range || neighbor_below_dist > max_range {
+                    d.draw_line_ex(bottom_left_px, bottom_right_px, thickness, color);
+                }
+                // Check neighbor LEFT
+                let neighbor_left_dist =
+                    new_york_dist(center_tile, current_pos + glam::IVec2::new(-1, 0));
+                if neighbor_left_dist < min_range || neighbor_left_dist > max_range {
+                    d.draw_line_ex(top_left_px, bottom_left_px, thickness, color);
+                }
+                // Check neighbor RIGHT
+                let neighbor_right_dist =
+                    new_york_dist(center_tile, current_pos + glam::IVec2::new(1, 0));
+                if neighbor_right_dist < min_range || neighbor_right_dist > max_range {
+                    d.draw_line_ex(top_right_px, bottom_right_px, thickness, color);
+                }
+            }
+        }
+    }
+}
