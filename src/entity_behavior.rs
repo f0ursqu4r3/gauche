@@ -7,6 +7,7 @@ use crate::{
     audio::{Audio, SoundEffect},
     entity::{swap_step_sound, EntityState, StepSound, VID},
     particle::{ParticleData, ParticleLayer},
+    particle_templates::{blood_puddle, blood_splatter},
     sprite::Sprite,
     state::{get_adjacent_entities, State},
     step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
@@ -189,6 +190,17 @@ pub fn attack(
         sprite,
         ParticleLayer::Foreground,
     ));
+
+    // spawn a blood splatter effect
+    let base_direction = (attacker_pos - attackee_pos).normalize_or_zero();
+    let magnitude = 0.1; // Adjust this value to control the intensity of the splatter
+    blood_splatter(state, audio, particle_pos, base_direction, magnitude);
+
+    // calculate the feet position of attacked entity
+    let attacked_entity = state.entity_manager.get_entity_mut(*attacked).unwrap();
+    let attacked_feet_pos = attacked_entity.pos + Vec2::new(0.0, 0.5); // Offset to the feet position
+                                                                       // spawn a blood puddle at the feet position
+    blood_puddle(&mut state.particles, attacked_feet_pos, magnitude);
 }
 
 pub fn die_if_health_zero(state: &mut State, vid: VID) {

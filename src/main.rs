@@ -8,6 +8,7 @@ mod inventory;
 mod item;
 mod item_use;
 mod particle;
+mod particle_templates;
 mod render;
 mod settings;
 mod sprite;
