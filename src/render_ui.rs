@@ -165,7 +165,7 @@ pub fn render_item_range_indicator_base(
     state: &State,
     _graphics: &Graphics,
 ) {
-    const RANGE_INDICATOR_COLOR: Color = Color::new(40, 40, 40, 120);
+    const RANGE_INDICATOR_COLOR: Color = Color::new(40, 40, 40, 40);
 
     if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
         if let Some(inv_entry) = player.inventory.selected_entry() {
@@ -183,7 +183,7 @@ pub fn render_item_range_indicator_top(
     state: &State,
     _graphics: &Graphics,
 ) {
-    const BORDER_COLOR: Color = Color::new(255, 255, 255, 150);
+    const BORDER_COLOR: Color = Color::new(255, 255, 255, 40);
     const BORDER_THICKNESS: f32 = 1.0;
 
     if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
