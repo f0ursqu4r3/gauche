@@ -85,7 +85,7 @@ impl Item {
             },
             // the medium heal: bandage
             ItemType::Bandage => Item {
-                type_: ItemType::Medkit, // Using Medkit type for now
+                type_: ItemType::Bandage, // Using Medkit type for now
                 name: "Bandage",
                 description: "a bandage to stop the bleeding",
                 marked_for_destruction: false,
@@ -103,7 +103,7 @@ impl Item {
             },
             // the mini heal: bandaid
             ItemType::Bandaid => Item {
-                type_: ItemType::Medkit, // Using Medkit type for now
+                type_: ItemType::Bandaid, // Using Medkit type for now
                 name: "Bandaid",
                 description: "a bandaid to stop the bleeding",
                 marked_for_destruction: false,

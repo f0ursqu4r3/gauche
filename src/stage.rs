@@ -219,8 +219,18 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             player.inventory.insert(fist_item);
 
             let mut medkit_item = Item::new(ItemType::Medkit);
-            medkit_item.count = 3; // Start with 3 medkits
+            medkit_item.count = medkit_item.max_count;
             player.inventory.insert(medkit_item);
+
+            // give the player some bandage
+            let mut bandage_item = Item::new(ItemType::Bandage);
+            bandage_item.count = 5.max(bandage_item.max_count); // Start with 5 bandages
+            player.inventory.insert(bandage_item);
+
+            // give the player some bandaid
+            let mut bandaid_item = Item::new(ItemType::Bandaid);
+            bandaid_item.count = 20.max(bandaid_item.max_count); // Start with 5 bandaids
+            player.inventory.insert(bandaid_item);
         }
 
         // Try to spawn player on a walkable tile near the center
