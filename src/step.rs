@@ -14,6 +14,7 @@ use crate::{
     },
     graphics::Graphics,
     item::Item,
+    item_use,
     particle_templates::spawn_weather_clouds,
     render::TILE_SIZE,
     stage::{flip_stage_tiles, TileData},
@@ -144,13 +145,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
             // We can now borrow `state` again because the previous borrow is gone.
             if let Some(mut item_to_use) = temp_item {
                 // Call the use function with the item we took.
-                crate::item_use::use_item(
-                    state,
-                    graphics,
-                    audio,
-                    Some(player_vid),
-                    &mut item_to_use,
-                );
+                let used =
+                    item_use::use_item(state, graphics, audio, Some(player_vid), &mut item_to_use);
+                // if used, determine which keys/mouse button triggered it and set the input
 
                 // Scope 3: Put the item back (or handle its destruction).
                 // This is another, separate mutable borrow of `state`.
