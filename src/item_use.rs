@@ -112,6 +112,8 @@ pub fn use_wall(
         return true; // Success
     }
 
+    audio.play_sound_effect(SoundEffect::CantUse);
+
     false // Use failed
 }
 
@@ -134,6 +136,8 @@ pub fn use_medkit(
             }
         }
     }
+    audio.play_sound_effect(SoundEffect::CantUse);
+
     false
 }
 
@@ -200,6 +204,7 @@ pub fn use_fist(
         }
     }
 
+    audio.play_sound_effect(SoundEffect::CantUse);
     false
 }
 
@@ -247,6 +252,14 @@ pub fn get_item_use_pos(state: &State, graphics: &Graphics) -> Option<IVec2> {
                 .screen_to_world(state.mouse_inputs.pos.as_vec2())
                 .as_ivec2(),
         )
+    // or space for use on self
+    } else if state.playing_inputs.space {
+        if let Some(player_vid) = state.player_vid {
+            if let Some(player) = state.entity_manager.get_entity(player_vid) {
+                return Some(player.pos.as_ivec2());
+            }
+        }
+        None // No player to use item on
     } else {
         None // No item use action
     }

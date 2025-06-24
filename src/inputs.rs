@@ -113,6 +113,7 @@ pub struct PlayingInputs {
     pub arrow_right: bool,
     pub arrow_up: bool,
     pub arrow_down: bool,
+    pub space: bool, // use item in place
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -143,6 +144,8 @@ impl PlayingInputs {
             arrow_right: false,
             arrow_up: false,
             arrow_down: false,
+
+            space: false, // use item in place
         }
     }
 }
@@ -288,6 +291,12 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
         new_inputs.arrow_down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_DOWN);
     }
 
+    new_inputs.space = rl.is_key_down(raylib::consts::KeyboardKey::KEY_SPACE)
+        || rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+        );
+
     let raw_mouse_pos = rl.get_mouse_position();
     new_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
 
@@ -351,15 +360,6 @@ pub fn process_input_playing(
 
     if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_EQUAL) {
         graphics.play_cam.zoom = (graphics.play_cam.zoom + 0.25).min(8.0);
-    }
-
-    // if i hit space set the player .shake to 1.0
-    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SPACE) {
-        if let Some(player_vid) = state.player_vid {
-            if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
-                player.shake += 0.1;
-            }
-        }
     }
 
     // inventory management
@@ -507,6 +507,7 @@ impl PlayingInputDebounceTimers {
             arrow_right: playing_inputs.arrow_right,
             arrow_up: playing_inputs.arrow_up,
             arrow_down: playing_inputs.arrow_down,
+            space: playing_inputs.space, // use item in place
         }
     }
 }

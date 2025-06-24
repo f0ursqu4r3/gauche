@@ -30,7 +30,7 @@ pub fn step(
     state: &mut State,
     audio: &mut Audio,
     graphics: &mut Graphics,
-    _dt: f32,
+    dt: f32,
 ) {
     state.time_since_last_update += rl.get_frame_time();
 
@@ -58,6 +58,9 @@ pub fn step(
             state.frame += 1;
         }
     }
+
+    // step sound effect cooldowns
+    audio.step_sound_effect_cooldowns(dt);
 }
 
 fn step_title(state: &mut State, _audio: &mut Audio) {
@@ -115,7 +118,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     }
 
     // --- Player Item Use Logic ---
-    let use_item = state.playing_inputs.arrow_down
+    let use_item = state.playing_inputs.space
+        || state.playing_inputs.arrow_down
         || state.playing_inputs.arrow_up
         || state.playing_inputs.arrow_left
         || state.playing_inputs.arrow_right

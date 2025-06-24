@@ -45,7 +45,10 @@ pub enum SoundEffect {
     ZombieScratch1,
     Punch1,
     ClothRip,
+    CantUse,
 }
+
+pub const SOUND_EFFECT_COOLDOWN: f32 = 0.1;
 
 /// The main struct for managing all game audio. It holds the loaded songs and sounds.
 pub struct Audio<'a> {
@@ -54,6 +57,8 @@ pub struct Audio<'a> {
     pub sounds: HashMap<SoundEffect, Sound<'a>>,
     pub music_volume: f32,
     pub sound_effects_volume: f32,
+
+    pub sound_effect_cooldowns: HashMap<SoundEffect, f32>,
 }
 
 impl<'a> Audio<'a> {
@@ -65,6 +70,7 @@ impl<'a> Audio<'a> {
             sounds: load_sounds(rl_audio)?,
             music_volume: 1.0,
             sound_effects_volume: 1.0,
+            sound_effect_cooldowns: HashMap::new(),
         })
     }
 
@@ -109,9 +115,21 @@ impl<'a> Audio<'a> {
 
     /// Plays a one-shot sound effect from the `SoundEffect` enum.
     pub fn play_sound_effect(&mut self, sound_effect: SoundEffect) {
+        // Check if the sound effect is on cooldown.
+        if let Some(cooldown) = self.sound_effect_cooldowns.get(&sound_effect) {
+            if *cooldown > 0.0 {
+                // If the cooldown is still active, do not play the sound.
+                return;
+            }
+        }
+
         if let Some(sound) = self.sounds.get_mut(&sound_effect) {
             sound.set_volume(self.sound_effects_volume);
             sound.play();
+
+            // Reset the cooldown for this sound effect.
+            self.sound_effect_cooldowns
+                .insert(sound_effect, SOUND_EFFECT_COOLDOWN);
         }
     }
 
@@ -119,12 +137,24 @@ impl<'a> Audio<'a> {
     /// The final volume will be `master_sfx_volume * scale`.
     /// The scale factor will be clamped between 0.0 and 1.0.
     pub fn play_sound_effect_scaled(&mut self, sound_effect: SoundEffect, scale: f32) {
+        // Check if the sound effect is on cooldown.
+        if let Some(cooldown) = self.sound_effect_cooldowns.get(&sound_effect) {
+            if *cooldown > 0.0 {
+                // If the cooldown is still active, do not play the sound.
+                return;
+            }
+        }
+
         if let Some(sound) = self.sounds.get_mut(&sound_effect) {
             // Calculate the final volume by multiplying the master sound effects volume by the scale factor.
             let final_volume = self.sound_effects_volume * scale.clamp(0.0, 1.0);
             sound.set_volume(final_volume);
             sound.play();
         }
+
+        // Reset the cooldown for this sound effect.
+        self.sound_effect_cooldowns
+            .insert(sound_effect, SOUND_EFFECT_COOLDOWN);
     }
 
     /// Sets the volume for all music tracks and updates the currently playing one.
@@ -140,6 +170,22 @@ impl<'a> Audio<'a> {
     /// Sets the volume for all sound effects.
     pub fn set_sfx_volume(&mut self, volume: f32) {
         self.sound_effects_volume = volume.clamp(0.0, 1.0);
+    }
+
+    pub fn step_sound_effect_cooldowns(&mut self, delta_time: f32) {
+        // Update cooldowns for all sound effects.
+        for cooldown in self.sound_effect_cooldowns.values_mut() {
+            if *cooldown > 0.0 {
+                *cooldown -= delta_time;
+                if *cooldown < 0.0 {
+                    *cooldown = 0.0; // Ensure it doesn't go negative.
+                }
+            }
+        }
+
+        // Remove any sound effects that have no cooldown left.
+        self.sound_effect_cooldowns
+            .retain(|_, &mut cooldown| cooldown > 0.0);
     }
 }
 

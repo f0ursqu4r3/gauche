@@ -217,6 +217,10 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
 
             let mut fist_item = Item::new(ItemType::Fist);
             player.inventory.insert(fist_item);
+
+            let mut medkit_item = Item::new(ItemType::Medkit);
+            medkit_item.count = 3; // Start with 3 medkits
+            player.inventory.insert(medkit_item);
         }
 
         // Try to spawn player on a walkable tile near the center
