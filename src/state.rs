@@ -22,6 +22,7 @@ pub enum Mode {
 pub struct State {
     pub mode: Mode,
 
+    pub mouse_mode: bool,
     pub mouse_inputs: MouseInputs,
 
     pub menu_inputs: MenuInputs,
@@ -60,6 +61,7 @@ impl State {
     pub fn new() -> Self {
         Self {
             mode: Mode::Title,
+            mouse_mode: true,
             mouse_inputs: MouseInputs::new(),
             menu_inputs: MenuInputs::new(),
             menu_input_debounce_timers: MenuInputDebounceTimers::new(),

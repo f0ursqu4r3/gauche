@@ -114,7 +114,14 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
     }
 
     // --- Player Item Use Logic ---
-    if state.mouse_inputs.left {
+    let use_item = state.playing_inputs.arrow_down
+        || state.playing_inputs.arrow_up
+        || state.playing_inputs.arrow_left
+        || state.playing_inputs.arrow_right
+        || state.mouse_inputs.left;
+
+    // do item use
+    if use_item {
         if let Some(player_vid) = state.player_vid {
             let mut temp_item: Option<Item> = None;
             let mut selected_index = 0;
@@ -164,9 +171,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                 }
             }
         }
-        // Consume the click so it doesn't trigger again next frame.
-        state.mouse_inputs.left = false;
     }
+    // // Consume the click so it doesn't trigger again next frame.
+    // state.mouse_inputs.left = false;
 
     // --- AI / Other Entity Logic ---
     for vid in state.entity_manager.get_active_vids() {

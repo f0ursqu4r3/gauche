@@ -1,3 +1,5 @@
+use glam::IVec2;
+
 use crate::{
     audio::{Audio, SoundEffect},
     entity::{DamageType, VID},
@@ -80,7 +82,10 @@ pub fn use_wall(
         None => return false,
     };
 
-    let target_tile_pos = graphics.screen_to_tile(state.mouse_inputs.pos.as_vec2());
+    let target_tile_pos = match get_item_use_pos(state, graphics) {
+        Some(tile) => tile,
+        None => return false, // Invalid tile position
+    };
     let user_tile_pos = user.pos.as_ivec2();
     let distance = new_york_dist(user_tile_pos, target_tile_pos);
 
@@ -150,7 +155,10 @@ pub fn use_fist(
         None => return false,
     };
 
-    let target_tile_pos = graphics.screen_to_tile(state.mouse_inputs.pos.as_vec2());
+    let target_tile_pos = match get_item_use_pos(state, graphics) {
+        Some(tile) => tile,
+        None => return false, // Invalid tile position
+    };
     let user_tile_pos = user_pos.as_ivec2();
     let distance = new_york_dist(user_tile_pos, target_tile_pos);
 
@@ -193,4 +201,53 @@ pub fn use_fist(
     }
 
     false
+}
+
+pub fn get_item_use_pos(state: &State, graphics: &Graphics) -> Option<IVec2> {
+    if state.playing_inputs.arrow_down
+        || state.playing_inputs.arrow_up
+        || state.playing_inputs.arrow_left
+        || state.playing_inputs.arrow_right
+    {
+        // Use the tile in the direction of the arrow keys
+        if let Some(player_vid) = state.player_vid {
+            if let Some(player) = state.entity_manager.get_entity(player_vid) {
+                let player_pos = player.pos.as_ivec2();
+                // do left right up down, but also diagonal if combined
+                let item_use_offset =
+                    if state.playing_inputs.arrow_down && state.playing_inputs.arrow_right {
+                        IVec2::new(1, 1)
+                    } else if state.playing_inputs.arrow_down && state.playing_inputs.arrow_left {
+                        IVec2::new(-1, 1)
+                    } else if state.playing_inputs.arrow_up && state.playing_inputs.arrow_right {
+                        IVec2::new(1, -1)
+                    } else if state.playing_inputs.arrow_up && state.playing_inputs.arrow_left {
+                        IVec2::new(-1, -1)
+                    } else if state.playing_inputs.arrow_down {
+                        IVec2::new(0, 1)
+                    } else if state.playing_inputs.arrow_up {
+                        IVec2::new(0, -1)
+                    } else if state.playing_inputs.arrow_left {
+                        IVec2::new(-1, 0)
+                    } else if state.playing_inputs.arrow_right {
+                        IVec2::new(1, 0)
+                    } else {
+                        return None; // No valid direction
+                    };
+
+                return Some(player_pos + item_use_offset);
+            }
+            return None;
+        }
+        return None; // No player to use item
+    } else if state.mouse_inputs.left {
+        // Use the tile under the mouse cursor
+        Some(
+            graphics
+                .screen_to_world(state.mouse_inputs.pos.as_vec2())
+                .as_ivec2(),
+        )
+    } else {
+        None // No item use action
+    }
 }

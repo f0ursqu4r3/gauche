@@ -108,6 +108,11 @@ pub struct PlayingInputs {
     pub num_row_8: bool,
     pub num_row_9: bool,
     pub num_row_0: bool,
+
+    pub arrow_left: bool,
+    pub arrow_right: bool,
+    pub arrow_up: bool,
+    pub arrow_down: bool,
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -133,6 +138,11 @@ impl PlayingInputs {
             num_row_8: false,
             num_row_9: false,
             num_row_0: false,
+
+            arrow_left: false,
+            arrow_right: false,
+            arrow_up: false,
+            arrow_down: false,
         }
     }
 }
@@ -201,40 +211,34 @@ pub fn set_menu_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
 
 pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
     let mut new_inputs = PlayingInputs::new();
-    new_inputs.left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT)
-        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_A)
-        || rl.is_gamepad_button_down(
+    // wasd
+    {
+        new_inputs.left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_A);
+        new_inputs.right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_D);
+        new_inputs.up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_W);
+        new_inputs.down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_S);
+    }
+
+    // gamepad face keys
+    {
+        new_inputs.left |= rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_LEFT,
         );
-    new_inputs.right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT)
-        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_D)
-        || rl.is_gamepad_button_down(
+        new_inputs.right |= rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
         );
-    new_inputs.up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_UP)
-        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_W)
-        || rl.is_gamepad_button_down(
+        new_inputs.up |= rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_UP,
         );
-    new_inputs.down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_DOWN)
-        || rl.is_key_down(raylib::consts::KeyboardKey::KEY_S)
-        || rl.is_gamepad_button_down(
+        new_inputs.down |= rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_DOWN,
         );
-    new_inputs.inventory_prev = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT_BRACKET)
-        || rl.is_gamepad_button_down(
-            0,
-            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_TRIGGER_1,
-        );
-    new_inputs.inventory_next = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT_BRACKET)
-        || rl.is_gamepad_button_down(
-            0,
-            raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_TRIGGER_1,
-        );
+    }
+
     new_inputs.mouse_down[0] =
         rl.is_mouse_button_down(raylib::consts::MouseButton::MOUSE_BUTTON_LEFT);
     new_inputs.mouse_down[1] =
@@ -244,32 +248,44 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
 
     // num row inputs
     {
-        new_inputs.num_row_1 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ONE)
-            || rl.is_gamepad_button_pressed(
-                0,
-                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_UP,
-            );
-        new_inputs.num_row_2 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_TWO)
-            || rl.is_gamepad_button_pressed(
-                0,
-                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
-            );
-        new_inputs.num_row_3 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_THREE)
-            || rl.is_gamepad_button_pressed(
-                0,
-                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
-            );
-        new_inputs.num_row_4 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_FOUR)
-            || rl.is_gamepad_button_pressed(
-                0,
-                raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
-            );
-        new_inputs.num_row_5 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_FIVE);
-        new_inputs.num_row_6 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SIX);
-        new_inputs.num_row_7 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_SEVEN);
-        new_inputs.num_row_8 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_EIGHT);
-        new_inputs.num_row_9 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_NINE);
-        new_inputs.num_row_0 = rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ZERO);
+        new_inputs.num_row_1 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_ONE);
+        new_inputs.num_row_2 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_TWO);
+        new_inputs.num_row_3 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_THREE);
+        new_inputs.num_row_4 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_FOUR);
+        new_inputs.num_row_5 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_FIVE);
+        new_inputs.num_row_6 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_SIX);
+        new_inputs.num_row_7 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_SEVEN);
+        new_inputs.num_row_8 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_EIGHT);
+        new_inputs.num_row_9 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_NINE);
+        new_inputs.num_row_0 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_ZERO);
+    }
+
+    // num row gamepad dpad 1-4 only
+    {
+        new_inputs.num_row_1 |= rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_UP,
+        );
+        new_inputs.num_row_2 |= rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+        );
+        new_inputs.num_row_3 |= rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_DOWN,
+        );
+        new_inputs.num_row_4 |= rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_LEFT_FACE_LEFT,
+        );
+    }
+
+    // arrow inputs
+    {
+        new_inputs.arrow_left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT);
+        new_inputs.arrow_right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT);
+        new_inputs.arrow_up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_UP);
+        new_inputs.arrow_down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_DOWN);
     }
 
     let raw_mouse_pos = rl.get_mouse_position();
@@ -487,6 +503,10 @@ impl PlayingInputDebounceTimers {
             num_row_8: playing_inputs.num_row_8,
             num_row_9: playing_inputs.num_row_9,
             num_row_0: playing_inputs.num_row_0,
+            arrow_left: playing_inputs.arrow_left,
+            arrow_right: playing_inputs.arrow_right,
+            arrow_up: playing_inputs.arrow_up,
+            arrow_down: playing_inputs.arrow_down,
         }
     }
 }
