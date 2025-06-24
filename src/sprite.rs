@@ -41,4 +41,7 @@ pub enum Sprite {
 
     // Item Sprites
     Fist,
+    Medkit,
+    Bandage,
+    Bandaid,
 }

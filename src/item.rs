@@ -4,6 +4,8 @@ use crate::{item, item_use::use_item, sprite::Sprite, tile::Tile};
 pub enum ItemType {
     Wall,
     Medkit,
+    Bandage,
+    Bandaid,
     Fist,
 }
 
@@ -63,6 +65,7 @@ impl Item {
                 range: 2.0,     // Walls can be placed on adjacent tiles
                 sprite: Some(Sprite::Wall),
             },
+            // the big heal
             ItemType::Medkit => Item {
                 type_: ItemType::Medkit,
                 name: "Medkit",
@@ -72,14 +75,51 @@ impl Item {
                 usable: true,
                 can_be_dropped: true,
                 consume_on_use: true,
-                max_count: 10,
-                count: 1, // Will be set below
+                max_count: 10, // Medkits are not stackable
+                count: 1,
                 use_cooldown: 5.0,
                 use_cooldown_countdown: 0.0,
                 min_range: 0.0, // Medkits are used on the player, not on tiles
                 range: 0.0,     // Medkits are used on the player, not on tiles
-                sprite: None,
+                sprite: Some(Sprite::Medkit),
             },
+            // the medium heal: bandage
+            ItemType::Bandage => Item {
+                type_: ItemType::Medkit, // Using Medkit type for now
+                name: "Bandage",
+                description: "a bandage to stop the bleeding",
+                marked_for_destruction: false,
+                can_be_placed: false,
+                usable: true,
+                can_be_dropped: true,
+                consume_on_use: true,
+                max_count: 10,
+                count: 1,
+                use_cooldown: 2.0,
+                use_cooldown_countdown: 0.0,
+                min_range: 0.0, // Bandages are used on the player, not on tiles
+                range: 0.0,     // Bandages are used on the player, not on tiles
+                sprite: Some(Sprite::Bandage),
+            },
+            // the mini heal: bandaid
+            ItemType::Bandaid => Item {
+                type_: ItemType::Medkit, // Using Medkit type for now
+                name: "Bandaid",
+                description: "a bandaid to stop the bleeding",
+                marked_for_destruction: false,
+                can_be_placed: false,
+                usable: true,
+                can_be_dropped: true,
+                consume_on_use: true,
+                max_count: 20,
+                count: 1,
+                use_cooldown: 0.2,
+                use_cooldown_countdown: 0.0,
+                min_range: 0.0, // Bandaids are used on the player, not on tiles
+                range: 0.0,     // Bandaids are used on the player, not on tiles
+                sprite: Some(Sprite::Bandaid),
+            },
+
             ItemType::Fist => Item {
                 type_: ItemType::Fist,
                 name: "Fist",

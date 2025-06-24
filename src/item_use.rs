@@ -64,6 +64,8 @@ fn use_item_internal_lookup(
     match item.type_ {
         ItemType::Wall => use_wall(state, graphics, audio, user_vid, item),
         ItemType::Medkit => use_medkit(state, audio, user_vid, item),
+        ItemType::Bandage => use_bandage(state, audio, user_vid, item),
+        ItemType::Bandaid => use_bandaid(state, audio, user_vid, item),
         ItemType::Fist => use_fist(state, graphics, audio, user_vid, item),
     }
 }
@@ -126,7 +128,55 @@ pub fn use_medkit(
 ) -> bool {
     if let Some(vid) = user_vid {
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-            const HEAL_AMOUNT: u32 = 25;
+            const HEAL_AMOUNT: u32 = 100;
+
+            // Use the entity's own max_hp value
+            if entity.health < entity.max_hp {
+                entity.health = (entity.health + HEAL_AMOUNT).min(entity.max_hp);
+                audio.play_sound_effect(SoundEffect::ClothRip);
+                return true; // Success
+            }
+        }
+    }
+    audio.play_sound_effect(SoundEffect::CantUse);
+
+    false
+}
+
+/// bandage is like medkit but only heals 10 HP
+pub fn use_bandage(
+    state: &mut State,
+    audio: &mut Audio,
+    user_vid: Option<VID>,
+    _item: &Item,
+) -> bool {
+    if let Some(vid) = user_vid {
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            const HEAL_AMOUNT: u32 = 10;
+
+            // Use the entity's own max_hp value
+            if entity.health < entity.max_hp {
+                entity.health = (entity.health + HEAL_AMOUNT).min(entity.max_hp);
+                audio.play_sound_effect(SoundEffect::ClothRip);
+                return true; // Success
+            }
+        }
+    }
+    audio.play_sound_effect(SoundEffect::CantUse);
+
+    false
+}
+
+/// bandaid is like medkit but only heals 1 HP
+pub fn use_bandaid(
+    state: &mut State,
+    audio: &mut Audio,
+    user_vid: Option<VID>,
+    _item: &Item,
+) -> bool {
+    if let Some(vid) = user_vid {
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            const HEAL_AMOUNT: u32 = 1;
 
             // Use the entity's own max_hp value
             if entity.health < entity.max_hp {
