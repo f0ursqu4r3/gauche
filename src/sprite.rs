@@ -49,4 +49,14 @@ pub enum Sprite {
     Medkit,
     Bandage,
     Bandaid,
+
+    // train
+    TrainHead,
+    TrainCarA,
+    TrainCarB,
+    Caboose,
+    Rail,
+    RailCrossing,
+    // RailCrossingLight,
+    // RailCrossingBarrier,
 }

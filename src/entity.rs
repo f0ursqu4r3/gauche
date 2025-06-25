@@ -115,6 +115,7 @@ pub struct Entity {
     pub dist_traveled_this_frame: f32,
     pub rot: f32,
     pub shake: f32,
+    pub horizontal_flip: bool,
 
     //  Rendering
     pub draw_layer: DrawLayer,
@@ -167,6 +168,7 @@ impl Entity {
             dist_traveled_this_frame: 0.0,
             rot: 0.0,
             shake: 0.0,
+            horizontal_flip: false,
 
             // Rendering
             draw_layer: DrawLayer::Middle,
