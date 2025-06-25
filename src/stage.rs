@@ -218,13 +218,13 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     state.add_entity_to_grid(player_vid, player_grid_pos);
 
     // --- Spawn Zombies ---
-    let num_zombies = 128;
+    let num_zombies = 32;
     for _ in 0..num_zombies {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
             {
                 let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
-                init_as_chicken(zombie);
+                init_as_zombie(zombie);
 
                 // place zombie
                 loop {
@@ -239,6 +239,32 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                 }
             }
             state.add_entity_to_grid(vid, zombie_grid_pos);
+        }
+    }
+
+    // spawn a bunch of chickens
+    let num_chickens = 128;
+    for _ in 0..num_chickens {
+        if let Some(vid) = state.entity_manager.new_entity() {
+            let chicken_grid_pos;
+            {
+                let chicken = state.entity_manager.get_entity_mut(vid).unwrap();
+                init_as_chicken(chicken);
+
+                // place chicken
+                loop {
+                    let x = random_range(0..width);
+                    let y = random_range(0..height);
+                    if is_tile_walkable(state, IVec2::new(x as i32, y as i32)) {
+                        let chicken = state.entity_manager.get_entity_mut(vid).unwrap();
+                        chicken.pos = IVec2::new(x as i32, y as i32).as_vec2() + Vec2::splat(0.5);
+                        chicken_grid_pos = chicken.pos.as_ivec2();
+                        break;
+                    }
+                }
+
+                state.add_entity_to_grid(vid, chicken_grid_pos);
+            }
         }
     }
 }

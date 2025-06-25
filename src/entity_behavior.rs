@@ -124,9 +124,13 @@ pub fn attack(
         return; // Entity not found, exit early
     }
 
-    // play sound effect based on attack type
-    let sound_effect = attack_sound_lookup(attack_type);
-    audio.play_sound_effect(sound_effect);
+    // play sound effect based on attack type, scale with distance to player if there is a player
+    let attacker_pos = state.entity_manager.get_entity(*attacker).unwrap().pos;
+    let sound_loudness =
+        calc_sound_loudness_from_player_dist_falloff(state, attacker_pos, BASE_SOUND_HEAR_DISTANCE);
+    if sound_loudness > 0.0 {
+        audio.play_sound_effect_scaled(attack_sound_lookup(attack_type), sound_loudness);
+    }
 
     // get strength of attack, lets say zombie scratch is 1
     let attack_strength = match attack_type {
@@ -224,11 +228,11 @@ pub fn indiscriminately_attack_nearby(state: &mut State, audio: &mut Audio, vid:
     }
 
     let pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
+    let own_alignment = state.entity_manager.get_entity(vid).unwrap().alignment;
     let adjacent_vids = get_adjacent_entities(state, pos);
-    // check if any adjacent entity is player
     let vid_of_adjacent_entity = adjacent_vids.iter().find(|&&adj_vid| {
         if let Some(adj_entity) = state.entity_manager.get_entity(adj_vid) {
-            adj_entity.alignment == crate::entity::Alignment::Player
+            adj_entity.alignment != own_alignment
         } else {
             false // Entity not found, treat as not a player
         }
@@ -496,7 +500,14 @@ pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
             EntityType::Zombie => SoundEffect::AnimalCrush2,
             EntityType::Chicken => SoundEffect::AnimalCrush2,
         };
-        audio.play_sound_effect(death_sound_effect);
+        let sound_loudness = calc_sound_loudness_from_player_dist_falloff(
+            state,
+            entity_pos,
+            BASE_SOUND_HEAR_DISTANCE,
+        );
+        if sound_loudness > 0.0 {
+            audio.play_sound_effect_scaled(death_sound_effect, sound_loudness);
+        }
 
         // 3. Spawn blood and gore effects.
         blood_splatter(

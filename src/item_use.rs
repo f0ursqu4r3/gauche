@@ -223,7 +223,9 @@ pub fn use_fist(
             .get(target_tile_pos.x as usize)
             .and_then(|col| col.get(target_tile_pos.y as usize))
         {
-            for &attackee_vid in vids_in_cell.clone().iter() {
+            // if theres even one, just attack the first one
+            if let Some(&attackee_vid) = vids_in_cell.first() {
+                // Perform the attack
                 attack(
                     state,
                     audio,
@@ -231,8 +233,8 @@ pub fn use_fist(
                     &attackee_vid,
                     AttackType::FistPunch,
                 );
+                return true; // Successfully attacked an entity
             }
-            return true; // Successfully attacked at least one entity.
         }
 
         // --- 2. If no entity, try to damage a tile ---
