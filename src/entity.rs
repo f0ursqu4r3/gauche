@@ -1,7 +1,7 @@
 use glam::{IVec2, Vec2};
 
 use crate::{
-    audio::Audio,
+    audio::{Audio, SoundEffect},
     inventory::Inventory,
     item::Item,
     sprite::Sprite,
@@ -15,6 +15,7 @@ pub enum EntityType {
     None,
     Player,
     Zombie,
+    Chicken,
 }
 
 /** these are the low level current actions of the entity */
@@ -144,6 +145,7 @@ pub struct Entity {
     pub attack_cooldown_countdown: f32,
 
     pub inventory: Inventory,
+    pub growl: Option<SoundEffect>,
 }
 
 impl Entity {
@@ -161,7 +163,7 @@ impl Entity {
             pos: Vec2::new(0.0, 0.0),
             vel: Vec2::new(0.0, 0.0),
             acc: Vec2::new(0.0, 0.0),
-            size: Vec2::new(8.0, 8.0),
+            size: Vec2::new(1.0, 1.0),
             dist_traveled_this_frame: 0.0,
             rot: 0.0,
             shake: 0.0,
@@ -194,6 +196,7 @@ impl Entity {
             attack_cooldown_countdown: 0.0,
 
             inventory: Inventory::new(),
+            growl: None,
         }
     }
 

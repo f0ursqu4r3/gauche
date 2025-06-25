@@ -2,6 +2,7 @@ mod audio;
 mod entity;
 mod entity_behavior;
 mod entity_manager;
+mod entity_templates;
 mod graphics;
 mod inputs;
 mod inventory;

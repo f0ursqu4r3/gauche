@@ -76,13 +76,11 @@ pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {
         let sound_loudness =
             calc_sound_loudness_from_player_dist_falloff(state, pos, BASE_SOUND_HEAR_DISTANCE);
         if sound_loudness > 0.0 {
-            // randomly pick growl 1 or 2
-            let growl_sound = if random_range(0..2) == 0 {
-                SoundEffect::ZombieGrowl1
-            } else {
-                SoundEffect::ZombieGrowl2
-            };
-            audio.play_sound_effect_scaled(growl_sound, sound_loudness * 0.3);
+            if let Some(entity) = state.entity_manager.get_entity(vid) {
+                if let Some(growl_sound) = entity.growl {
+                    audio.play_sound_effect_scaled(growl_sound, sound_loudness * 0.3);
+                }
+            }
         }
         // shake the entity a little
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
@@ -228,7 +226,7 @@ pub fn indiscriminately_attack_nearby(state: &mut State, audio: &mut Audio, vid:
     let pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
     let adjacent_vids = get_adjacent_entities(state, pos);
     // check if any adjacent entity is player
-    let vid_of_adjacent_player = adjacent_vids.iter().find(|&&adj_vid| {
+    let vid_of_adjacent_entity = adjacent_vids.iter().find(|&&adj_vid| {
         if let Some(adj_entity) = state.entity_manager.get_entity(adj_vid) {
             adj_entity.alignment == crate::entity::Alignment::Player
         } else {
@@ -237,7 +235,7 @@ pub fn indiscriminately_attack_nearby(state: &mut State, audio: &mut Audio, vid:
     });
 
     let attacker_vid = &vid;
-    if let Some(attackee_vid) = vid_of_adjacent_player {
+    if let Some(attackee_vid) = vid_of_adjacent_entity {
         attack(
             state,
             audio,
@@ -496,6 +494,7 @@ pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
             EntityType::None => SoundEffect::BoxBreak,
             EntityType::Player => SoundEffect::AnimalCrush1,
             EntityType::Zombie => SoundEffect::AnimalCrush2,
+            EntityType::Chicken => SoundEffect::AnimalCrush2,
         };
         audio.play_sound_effect(death_sound_effect);
 

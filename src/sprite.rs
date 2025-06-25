@@ -24,7 +24,12 @@ pub enum Sprite {
     Water3,
     Water4,
 
-    // Enemy Sprites
+    // Chicken Sprites
+    Chick,
+    Hen,
+    Rooster,
+
+    // Zombie Sprites
     Zombie,
     ZombieAngry,
     ZombieScratch1,

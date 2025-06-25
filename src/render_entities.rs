@@ -94,8 +94,19 @@ pub fn render_entities(
                     entity_pixel_pos
                 };
 
-                let dest_rec = Rectangle::new(position.x, position.y, TILE_SIZE, TILE_SIZE);
-                let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
+                // Calculate the final render size in pixels using the entity's size property.
+                let render_size_pixels = entity.size * TILE_SIZE;
+
+                // The destination rectangle now uses the calculated render size.
+                let dest_rec = Rectangle::new(
+                    position.x,
+                    position.y,
+                    render_size_pixels.x,
+                    render_size_pixels.y,
+                );
+
+                // The origin for rotation is the center of the final rendered size.
+                let origin = Vector2::new(render_size_pixels.x / 2.0, render_size_pixels.y / 2.0);
 
                 d.draw_texture_pro(
                     texture,
@@ -107,7 +118,6 @@ pub fn render_entities(
                 );
             }
 
-            // Call the dedicated function to render the health bar.
             render_entity_health_bar(d, entity, alpha);
         }
     }

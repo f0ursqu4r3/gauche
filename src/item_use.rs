@@ -2,7 +2,7 @@ use glam::IVec2;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{DamageType, VID},
+    entity::{Alignment, DamageType, VID},
     entity_behavior::{attack, AttackType},
     graphics::Graphics,
     item::{Item, ItemType},
@@ -218,17 +218,12 @@ pub fn use_fist(
 
     if distance >= item.min_range as i32 && distance <= item.range as i32 {
         // --- 1. Prioritize attacking entities ---
-        if let Some(cell) = state
+        if let Some(vids_in_cell) = state
             .spatial_grid
             .get(target_tile_pos.x as usize)
             .and_then(|col| col.get(target_tile_pos.y as usize))
         {
-            if let Some(&attackee_vid) = cell.iter().find(|&&vid| {
-                state
-                    .entity_manager
-                    .get_entity(vid)
-                    .is_some_and(|e| e.alignment == crate::entity::Alignment::Enemy)
-            }) {
+            for &attackee_vid in vids_in_cell.clone().iter() {
                 attack(
                     state,
                     audio,
@@ -236,8 +231,8 @@ pub fn use_fist(
                     &attackee_vid,
                     AttackType::FistPunch,
                 );
-                return true;
             }
+            return true; // Successfully attacked at least one entity.
         }
 
         // --- 2. If no entity, try to damage a tile ---

@@ -4,6 +4,7 @@ use rand::{random, random_range};
 
 use crate::{
     entity::{self, EntityType, Mood},
+    entity_templates::{init_as_chicken, init_as_player, init_as_zombie},
     graphics::Graphics,
     item::{Item, ItemType},
     sprite::Sprite,
@@ -198,40 +199,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     state.player_vid = Some(player_vid);
     let player_grid_pos;
     {
-        // Initialize player entity
-        {
-            let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
-            player.active = true;
-            player.type_ = EntityType::Player;
-            player.sprite = Sprite::Player;
-            player.impassable = true;
-            player.alignment = entity::Alignment::Player;
-            player.move_cooldown = 0.12;
-            player.health = 100;
-            player.max_hp = 100;
-
-            let mut wall_item = Item::new(ItemType::Wall);
-            wall_item.count = 99; // Start with 99 walls
-
-            player.inventory.insert(wall_item);
-
-            let mut fist_item = Item::new(ItemType::Fist);
-            player.inventory.insert(fist_item);
-
-            let mut medkit_item = Item::new(ItemType::Medkit);
-            medkit_item.count = medkit_item.max_count;
-            player.inventory.insert(medkit_item);
-
-            // give the player some bandage
-            let mut bandage_item = Item::new(ItemType::Bandage);
-            bandage_item.count = 5.max(bandage_item.max_count); // Start with 5 bandages
-            player.inventory.insert(bandage_item);
-
-            // give the player some bandaid
-            let mut bandaid_item = Item::new(ItemType::Bandaid);
-            bandaid_item.count = 20.max(bandaid_item.max_count); // Start with 5 bandaids
-            player.inventory.insert(bandaid_item);
-        }
+        let player = state.entity_manager.get_entity_mut(player_vid).unwrap();
+        init_as_player(player);
 
         // Try to spawn player on a walkable tile near the center
         loop {
@@ -254,24 +223,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
             {
-                // init zombie
-                {
-                    let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
-                    zombie.active = true;
-                    zombie.type_ = EntityType::Zombie;
-                    zombie.sprite = Sprite::Zombie;
-                    zombie.impassable = true;
-                    zombie.alignment = entity::Alignment::Enemy;
-                    zombie.mood = Mood::Wander;
-                    zombie.move_cooldown = 0.8;
-                    zombie.attack_cooldown = 1.0;
-                    zombie.health = 40;
-                    zombie.max_hp = 40;
-                    // randomize move cooldown timer in range
-                    zombie.move_cooldown_countdown = random_range(0.0..zombie.move_cooldown);
-                    // randomize step sound, 1 or 2
-                    entity::randomize_step_sound(zombie);
-                }
+                let zombie = state.entity_manager.get_entity_mut(vid).unwrap();
+                init_as_chicken(zombie);
 
                 // place zombie
                 loop {
