@@ -233,7 +233,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
 
     // --- Spawn Zombies ---
     // let num_zombies = 0;
-    let num_zombies = 700;
+    let num_zombies = 256;
     for _ in 0..num_zombies {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
@@ -259,7 +259,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
 
     // spawn a bunch of chickens
     // let num_chickens = 0;
-    let num_chickens = 32;
+    let num_chickens = 128;
     for _ in 0..num_chickens {
         if let Some(vid) = state.entity_manager.new_entity() {
             let chicken_grid_pos;
