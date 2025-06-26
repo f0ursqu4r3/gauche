@@ -176,10 +176,6 @@ fn load_sprite_textures(
     println!("--- Loading Sprites from: '{}' ---", asset_folder);
 
     for sprite in Sprite::iter() {
-        if sprite == Sprite::NoSprite {
-            continue;
-        }
-
         let filename: &'static str = sprite.into();
         let png_path = Path::new(asset_folder).join(format!("{}.png", filename));
 

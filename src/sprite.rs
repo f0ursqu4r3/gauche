@@ -5,7 +5,6 @@ use strum::{EnumCount, EnumIter, IntoStaticStr}; // Add IntoStaticStr here
 #[derive(Copy, Clone, Debug, EnumIter, EnumCount, PartialEq, Eq, Hash, IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
 pub enum Sprite {
-    NoSprite,
     Reticle,
     Cursor,
     SelectedArrow,
@@ -49,6 +48,7 @@ pub enum Sprite {
     Medkit,
     Bandage,
     Bandaid,
+    ConductorHat,
 
     // train
     TrainHead,
@@ -57,6 +57,6 @@ pub enum Sprite {
     Caboose,
     Rail,
     RailCrossing,
-    // RailCrossingLight,
-    // RailCrossingBarrier,
+    TrainBlinkensign,
+    TrainCarBlockPole,
 }

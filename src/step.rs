@@ -7,10 +7,11 @@ pub const TIMESTEP: f32 = 1.0 / FRAMES_PER_SECOND as f32;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{self, Entity, StepSound, VID},
+    entity::{self, Entity, EntityType, StepSound, VID},
     entity_behavior::{
         die_if_health_zero, growl_sometimes, indiscriminately_attack_nearby, move_entity_on_grid,
-        ready_to_move, step_attack_cooldown, step_inventory_item_cooldowns, wander,
+        ready_to_move, step_attack_cooldown, step_inventory_item_cooldowns, step_move_cooldown,
+        step_rail_layer, step_train, wander,
     },
     graphics::Graphics,
     item::Item,
@@ -109,6 +110,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
                     wants_to_move_to,
                     false, // Do not ignore tile collision for player
                     false, // reset move cooldown
+                    false, // do not ignore entity collision for player
                 );
             }
         }
@@ -178,6 +180,7 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
 
     // --- AI / Other Entity Logic ---
     for vid in state.entity_manager.get_active_vids() {
+        step_move_cooldown(state, vid);
         wander(state, audio, vid);
         entity_shake_attenuation(state, vid);
         growl_sometimes(state, audio, vid);
@@ -185,6 +188,8 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         die_if_health_zero(state, audio, vid);
         step_attack_cooldown(state, vid);
         step_inventory_item_cooldowns(state, vid);
+        step_rail_layer(state, audio, vid);
+        step_train(state, audio, vid);
     }
 
     // flip tile variants
@@ -223,9 +228,12 @@ pub fn lean_entity(entity: &mut Entity) {
 
 pub fn entity_step_sound_lookup(entity: &Entity) -> SoundEffect {
     // TODO: different step sounds based on entity type or state
-    match entity.step_sound {
-        StepSound::Step1 => SoundEffect::Step1,
-        StepSound::Step2 => SoundEffect::Step2,
+    match entity.type_ {
+        EntityType::RailLayer => SoundEffect::RailPlace,
+        _ => match entity.step_sound {
+            StepSound::Step1 => SoundEffect::Step1,
+            StepSound::Step2 => SoundEffect::Step2,
+        },
     }
 }
 

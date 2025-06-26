@@ -16,11 +16,12 @@ pub enum Tile {
     Wall,
     Ruin,
     Water,
+    Rail,
 }
 
 impl Tile {
     pub fn walkable(self) -> bool {
-        matches!(self, Tile::None | Tile::Grass | Tile::Ruin)
+        matches!(self, Tile::None | Tile::Grass | Tile::Ruin | Tile::Rail)
     }
 
     pub fn empty(self) -> bool {
@@ -127,6 +128,7 @@ pub fn get_tile_variants(tile_data: &TileData) -> Vec<Sprite> {
         Tile::Wall => vec![Sprite::Wall],
         Tile::Ruin => vec![Sprite::Ruin],
         Tile::Water => vec![Sprite::Water3, Sprite::Water4],
+        Tile::Rail => vec![Sprite::Rail],
         _ => vec![],
     }
 }
@@ -170,6 +172,7 @@ pub fn on_tile_break(state: &mut State, audio: &mut Audio, tile_pos: IVec2, tile
                 breakable: false,
                 variant: 0,
                 flip_speed: 0,
+                rot: 0.0,
             };
             state
                 .stage
@@ -185,6 +188,7 @@ pub fn on_tile_break(state: &mut State, audio: &mut Audio, tile_pos: IVec2, tile
                 breakable: false,
                 variant: 0,
                 flip_speed: 0,
+                rot: 0.0,
             };
             state
                 .stage
@@ -200,18 +204,19 @@ pub fn on_tile_break(state: &mut State, audio: &mut Audio, tile_pos: IVec2, tile
 /// Called when a tile takes damage but is not yet broken.
 /// Handles sound and particle effects.
 pub fn on_tile_damage(state: &mut State, audio: &mut Audio, tile_pos: IVec2, attacker_pos: Vec2) {
-    let tile_sprite = if let Some(td) = state
+    let tile_sprite: Option<Sprite> = if let Some(td) = state
         .stage
         .get_tile(tile_pos.x as usize, tile_pos.y as usize)
     {
-        get_tile_sprite(&td).unwrap_or(Sprite::NoSprite)
+        get_tile_sprite(&td)
     } else {
         return;
     };
-
-    if tile_sprite == Sprite::NoSprite {
+    // If we don't have a sprite, we can't do anything.
+    if tile_sprite.is_none() {
         return;
     }
+    let tile_sprite = tile_sprite.unwrap();
 
     // Play a generic "thud" sound.
     if let Some(tile_type) = state

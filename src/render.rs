@@ -213,7 +213,7 @@ pub fn render_playing(
     }
 
     render_health_bar(state, graphics, screen);
-    // render_debug_info(state, graphics, screen);
+    render_debug_info(state, graphics, screen);
 
     // draw inventory
     render_inventory(state, graphics, screen);

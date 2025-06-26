@@ -1,7 +1,7 @@
 use glam::Vec2;
 use raylib::{
     color::Color,
-    math::Vector2,
+    math::{Rectangle, Vector2},
     prelude::{RaylibDraw, RaylibDrawHandle, RaylibMode2D, RaylibTextureMode},
 };
 
@@ -57,6 +57,7 @@ pub fn render_tile_health_bar(
 }
 
 /// Iterates through the stage and renders all visible tiles and their health bars.
+/// Iterates through the stage and renders all visible tiles and their health bars.
 pub fn render_tiles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
     state: &State,
@@ -92,14 +93,30 @@ pub fn render_tiles(
 
                     // Only draw the tile and its health bar if it's visible at all.
                     if alpha > 0 {
-                        d.draw_texture(
+                        let source_rec =
+                            Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
+
+                        // The destination rectangle's x/y should be the *center* of the tile for rotation.
+                        let dest_rec = Rectangle::new(
+                            tile_pixel_pos.x + (TILE_SIZE / 2.0),
+                            tile_pixel_pos.y + (TILE_SIZE / 2.0),
+                            TILE_SIZE,
+                            TILE_SIZE,
+                        );
+
+                        // The origin for rotation is the center of the sprite itself.
+                        let origin = Vector2::new(TILE_SIZE / 2.0, TILE_SIZE / 2.0);
+
+                        d.draw_texture_pro(
                             texture,
-                            tile_pixel_pos.x as i32,
-                            tile_pixel_pos.y as i32,
+                            source_rec,
+                            dest_rec,
+                            origin,
+                            tile_data.rot, // Use the rotation from tile_data
                             Color::new(255, 255, 255, alpha),
                         );
 
-                        // Call the dedicated function to render the health bar.
+                        // Call the dedicated function to render the health bar (it is not rotated).
                         render_tile_health_bar(d, &tile_data, tile_pixel_pos, alpha);
                     }
                 }

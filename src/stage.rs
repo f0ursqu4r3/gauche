@@ -26,6 +26,7 @@ pub struct TileData {
     pub breakable: bool,
     pub variant: u8,
     pub flip_speed: u16,
+    pub rot: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +46,7 @@ impl Stage {
                     breakable: false,
                     variant: 0,
                     flip_speed: 0,
+                    rot: 0.0,
                 };
                 height
             ];
@@ -86,6 +88,7 @@ impl Stage {
                     breakable: false,
                     variant: 0,
                     flip_speed: 0,
+                    rot: 0.0,
                 };
             }
         }
@@ -111,6 +114,14 @@ impl Stage {
 
     pub fn get_dims(&self) -> IVec2 {
         IVec2::new(self.get_width() as i32, self.get_height() as i32)
+    }
+
+    // function to see if coords are in bounds
+    pub fn in_bounds(&self, pos: IVec2) -> bool {
+        pos.x >= 0
+            && pos.x < self.get_width() as i32
+            && pos.y >= 0
+            && pos.y < self.get_height() as i32
     }
 }
 
@@ -156,6 +167,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                         breakable: false,
                         variant: 0,
                         flip_speed: 0,
+                        rot: 0.0,
                     },
                 );
             } else if noise_value < -0.8 {
@@ -174,6 +186,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                                 1 // Variant 1 for water
                             },
                         flip_speed: FRAMES_PER_SECOND as u16, // Flip every 2 seconds
+                        rot: 0.0,
                     },
                 );
             } else {
@@ -187,6 +200,7 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
                         breakable: false,
                         variant: 0,
                         flip_speed: 0,
+                        rot: 0.0,
                     },
                 );
             }
@@ -218,7 +232,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     state.add_entity_to_grid(player_vid, player_grid_pos);
 
     // --- Spawn Zombies ---
-    let num_zombies = 32;
+    // let num_zombies = 0;
+    let num_zombies = 700;
     for _ in 0..num_zombies {
         if let Some(vid) = state.entity_manager.new_entity() {
             let zombie_grid_pos;
@@ -243,7 +258,8 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
     }
 
     // spawn a bunch of chickens
-    let num_chickens = 128;
+    // let num_chickens = 0;
+    let num_chickens = 32;
     for _ in 0..num_chickens {
         if let Some(vid) = state.entity_manager.new_entity() {
             let chicken_grid_pos;
@@ -287,6 +303,7 @@ pub fn flip_stage_tiles(state: &mut State) {
                             breakable: tile_data.breakable,
                             variant: new_variant,
                             flip_speed: tile_data.flip_speed,
+                            rot: 0.0,
                         },
                     );
                 }

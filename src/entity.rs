@@ -16,6 +16,8 @@ pub enum EntityType {
     Player,
     Zombie,
     Chicken,
+    RailLayer,
+    Train,
 }
 
 /** these are the low level current actions of the entity */
@@ -119,7 +121,7 @@ pub struct Entity {
 
     //  Rendering
     pub draw_layer: DrawLayer,
-    pub sprite: Sprite,
+    pub sprite: Option<Sprite>,
 
     // StateMachine
     pub state: EntityState,
@@ -147,6 +149,7 @@ pub struct Entity {
 
     pub inventory: Inventory,
     pub growl: Option<SoundEffect>,
+    pub direction: IVec2,
 }
 
 impl Entity {
@@ -172,7 +175,7 @@ impl Entity {
 
             // Rendering
             draw_layer: DrawLayer::Middle,
-            sprite: Sprite::NoSprite,
+            sprite: None,
 
             // StateMachine
             state: EntityState::Idle,
@@ -199,6 +202,7 @@ impl Entity {
 
             inventory: Inventory::new(),
             growl: None,
+            direction: IVec2::new(0, 0),
         }
     }
 

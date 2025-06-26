@@ -1,17 +1,21 @@
 // wander behavior
 
+use std::vec;
+
 use glam::{IVec2, Vec2};
 use rand::random_range;
 
 use crate::{
     audio::{Audio, SoundEffect},
-    entity::{swap_step_sound, EntityState, EntityType, StepSound, VID},
+    entity::{self, swap_step_sound, EntityState, EntityType, StepSound, VID},
+    entity_templates::init_as_train,
     particle::{ParticleData, ParticleLayer},
     particle_templates::{blood_puddle, blood_splatter},
     sprite::Sprite,
+    stage::TileData,
     state::{get_adjacent_entities, State},
     step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
-    tile::is_tile_occupied,
+    tile::{is_tile_occupied, Tile},
 };
 
 pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
@@ -39,6 +43,7 @@ pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
                 wants_to_move_to,
                 false, // Do not ignore tile collision for zombies
                 false, // reset move cooldown
+                false, // ignore entity collision
             );
 
             // if zombie, put him into his base sprite
@@ -47,7 +52,7 @@ pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
             if entity_type == crate::entity::EntityType::Zombie {
                 // set sprite to zombie base sprite
                 if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-                    entity.sprite = Sprite::Zombie;
+                    entity.sprite = Some(Sprite::Zombie);
                     entity.state = EntityState::Idle; // Reset state to idle after wandering
                 }
             }
@@ -286,21 +291,35 @@ pub fn step_inventory_item_cooldowns(state: &mut State, vid: VID) {
 }
 
 /// Checks if an entity is ready to move based on its cooldown.
-/// Also resets the move cooldown countdown if the entity is ready to move.
 pub fn ready_to_move(state: &mut State, vid: VID) -> bool {
-    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
         if entity.move_cooldown_countdown > 0.0 {
-            entity.move_cooldown_countdown -= TIMESTEP;
             return false; // Not ready to move yet
         }
-        return true;
+        return true; // Ready to move
     }
     false // Entity not found
 }
 
+pub fn step_move_cooldown(state: &mut State, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // Step the move cooldown countdown for the entity
+    if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+        if entity.move_cooldown_countdown > 0.0 {
+            entity.move_cooldown_countdown -= TIMESTEP;
+        } else {
+            entity.move_cooldown_countdown = 0.0;
+        }
+    }
+}
+
 pub fn reset_move_cooldown(state: &mut State, vid: VID) {
     if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-        entity.move_cooldown_countdown = entity.move_cooldown; // Reset cooldown countdown
+        entity.move_cooldown_countdown = entity.move_cooldown;
     }
 }
 
@@ -335,6 +354,7 @@ pub fn move_entity_on_grid(
     vid: VID,
     target_grid_pos: IVec2,
     ignore_tile_collision: bool,
+    ignore_entity_collision: bool,
     dont_reset_move_cooldown: bool,
 ) -> bool {
     // Get the grid representation of the target position
@@ -348,7 +368,9 @@ pub fn move_entity_on_grid(
     // Check if the tile is already occupied by another impassable entity
     let tile_is_unoccupied = !is_tile_occupied(state, target_grid_pos);
     let mut moved = false;
-    if (terrain_is_walkable || ignore_tile_collision) && tile_is_unoccupied {
+    if (terrain_is_walkable || ignore_tile_collision)
+        && (tile_is_unoccupied || ignore_entity_collision)
+    {
         // If the move is valid, get the entity to update it
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
             let old_grid_pos = entity.pos.as_ivec2();
@@ -424,11 +446,15 @@ pub fn move_entity_on_grid(
         // put a footprint based on entity type
         // put ZombieGib1 slightly offset from entity position
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
-            let footprint_sprite = match entity.type_ {
-                crate::entity::EntityType::Player => Sprite::PlayerFootprint,
-                crate::entity::EntityType::Zombie => Sprite::ZombieFootprint,
-                _ => Sprite::NoSprite, // No footprint for other entities
+            let footprint_sprite: Option<Sprite> = match entity.type_ {
+                EntityType::Player => Some(Sprite::PlayerFootprint),
+                EntityType::Zombie => Some(Sprite::ZombieFootprint),
+                _ => None,
             };
+            if footprint_sprite.is_none() {
+                return moved; // No footprint sprite for this entity type
+            }
+            let footprint_sprite = footprint_sprite.unwrap();
 
             // Place a footprint at the entity's position
             let footprint_pos = entity.pos + Vec2::new(0.0, 0.5);
@@ -457,7 +483,7 @@ pub fn move_entity_on_grid(
 
 /// Spawns death effects (corpse, blood, sound) for a dying entity.
 pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
-    let mut corpse_sprite = Sprite::NoSprite;
+    let mut corpse_sprite = None;
     let mut entity_pos = glam::Vec2::ZERO;
     let mut entity_rot = 0.0;
     let mut should_spawn_effects = false;
@@ -466,9 +492,9 @@ pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
     // We get all the info we need from the entity and store it in local variables.
     if let Some(entity) = state.entity_manager.get_entity(vid) {
         corpse_sprite = match entity.type_ {
-            crate::entity::EntityType::Player => Sprite::PlayerDead,
-            crate::entity::EntityType::Zombie => Sprite::ZombieDead,
-            _ => Sprite::NoSprite,
+            crate::entity::EntityType::Player => Some(Sprite::PlayerDead),
+            crate::entity::EntityType::Zombie => Some(Sprite::ZombieDead),
+            _ => None,
         };
         entity_pos = entity.pos;
         entity_rot = entity.rot;
@@ -480,7 +506,7 @@ pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
     // Now that the immutable borrow is gone, we can safely mutate `state`.
     if should_spawn_effects {
         // 1. Spawn a static particle for the corpse.
-        if corpse_sprite != Sprite::NoSprite {
+        if let Some(corpse_sprite) = corpse_sprite {
             let corpse_data = ParticleData::new(
                 entity_pos,
                 glam::Vec2::splat(16.0), // TILE_SIZE
@@ -499,6 +525,8 @@ pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
             EntityType::Player => SoundEffect::AnimalCrush1,
             EntityType::Zombie => SoundEffect::AnimalCrush2,
             EntityType::Chicken => SoundEffect::AnimalCrush2,
+            EntityType::RailLayer => SoundEffect::BoxBreak,
+            EntityType::Train => SoundEffect::BoxBreak,
         };
         let sound_loudness = calc_sound_loudness_from_player_dist_falloff(
             state,
@@ -539,6 +567,295 @@ pub fn die_if_health_zero(state: &mut State, audio: &mut Audio, vid: VID) {
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
             entity.marked_for_destruction = true;
             entity.state = EntityState::Dead; // Set state for clarity
+        }
+    }
+}
+
+// step as rail layer
+/*
+    if the entity is a rail layer, move it in the direction it is facing if its move cooldown is ready.
+    ignore all tile collision no matter what
+    convert the tile you move onto into a rail tile
+    keep moving until you hit the edge of the map
+    once you hit the edge of the map, mark yourself for destruction
+*/
+pub fn step_rail_layer(state: &mut State, audio: &mut Audio, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // check if entity is a rail layer
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        if entity.type_ != crate::entity::EntityType::RailLayer {
+            return; // Only rail layers should step this way
+        }
+    }
+
+    // check if entity is ready to move
+    if !ready_to_move(state, vid) {
+        return; // Not ready to move yet
+    }
+
+    // get current position and direction
+    let current_pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
+    let direction = state.entity_manager.get_entity(vid).unwrap().direction;
+
+    // calculate new position based on direction
+    let new_pos = current_pos + direction;
+
+    // check if new position is within bounds of the stage
+    let mut went_out_of_bounds: bool = false;
+    if !state.stage.in_bounds(new_pos) {
+        // mark for destruction if out of bounds
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            entity.marked_for_destruction = true;
+            println!(
+                "Rail layer out of bounds, marking for destruction: {:?}",
+                vid
+            );
+            went_out_of_bounds = true;
+        }
+    }
+    if went_out_of_bounds {
+        // print
+        println!(
+            "Rail layer {:?} went out of bounds at position {:?}",
+            vid, new_pos
+        );
+        // print the direction it was going
+        println!(
+            "Rail layer {:?} was going in direction {:?}",
+            vid, direction
+        );
+        // print the direction it came from
+        let opposite_direction = -direction;
+        println!(
+            "Rail layer {:?} came from direction {:?}",
+            vid, opposite_direction
+        );
+
+        // we will spawn a train at the start position on the first rail that was placed
+        // calculate your start position by going in the opposite direction to the edge of the map
+        let mut start_pos = new_pos + opposite_direction;
+        while state.stage.in_bounds(start_pos) {
+            start_pos += opposite_direction;
+        }
+        start_pos -= opposite_direction; // Step back to the last valid position
+
+        // print the start position
+        println!("new train layer {:?} start position: {:?}", vid, start_pos);
+
+        // kill all entities in the start position instantly, just set health to 0
+        // get all vids in the spatial grid at the start position
+        if !state.stage.in_bounds(start_pos) {
+            println!("Start position out of bounds, cannot kill entities.");
+            return;
+        }
+        let vids_in_start_pos = &state.spatial_grid[start_pos.x as usize][start_pos.y as usize];
+
+        for entity_vid in vids_in_start_pos {
+            if *entity_vid != vid {
+                if let Some(entity) = state.entity_manager.get_entity_mut(*entity_vid) {
+                    entity.health = 0; // Set health to 0 to simulate instant death
+                }
+            }
+        }
+
+        // spawn a train at the start position
+        if let Some(new_entity_vid) = state.entity_manager.new_entity() {
+            if let Some(entity) = state.entity_manager.get_entity_mut(new_entity_vid) {
+                init_as_train(entity);
+                entity.pos = start_pos.as_vec2() + Vec2::splat(0.5); // Center the train on the grid tile
+                                                                     // set the direction to be the same as the rail layer
+                entity.direction = direction;
+                // set target position to be its starting position
+                entity.target_pos = Some(start_pos.as_vec2() + Vec2::splat(0.5));
+                // do int 5-20, cast to float
+                let train_length: f32 = (random_range(5..=20) as f32).floor();
+                entity.counter_a = train_length;
+            }
+        }
+        return;
+    }
+
+    // convert the tile at new position into a rail tile
+    // #[derive(Debug, Clone, Copy, PartialEq)]
+    // pub struct TileData {
+    //     pub tile: Tile,
+    //     pub hp: u8,
+    //     pub max_hp: u8,
+    //     pub breakable: bool,
+    //     pub variant: u8,
+    //     pub flip_speed: u16,
+    // }
+    state.stage.set_tile(
+        new_pos.x as usize,
+        new_pos.y as usize,
+        TileData {
+            tile: Tile::Rail,
+            hp: 0, // Rail tiles are not breakable
+            max_hp: 0,
+            breakable: false,
+            variant: 0,    // No variant for rail tiles
+            flip_speed: 0, // No flip speed for rail tiles
+            rot: 90.0,     // No rotation for rail tiles
+        },
+    );
+
+    // move the entity to the new position
+    move_entity_on_grid(state, audio, vid, new_pos, true, true, false);
+}
+
+/// now a step train
+/*
+    a train should move in the direction is is facing if that target tile is a rail tile
+    when a train moves, it should immediatly do 1000 damage to all entities in the target tile (except trains)
+    when a trains next move will put it off the map, mark itself for destruction
+    trains ignore entity collision, but first check to make sure the target position doesnt have a train before trying to move
+
+
+    if the target tile is not a rail tile, it should set its own hp to 0
+
+    later: (do not implement now)
+        and spawn a fire and a bunch of smoke particles
+*/
+pub fn step_train(state: &mut State, audio: &mut Audio, vid: VID) {
+    // check if exists
+    if state.entity_manager.get_entity(vid).is_none() {
+        return; // Entity not found, exit early
+    }
+
+    // check if entity is a train
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        if entity.type_ != crate::entity::EntityType::Train {
+            return; // Only trains should step this way
+        }
+    }
+
+    // check if entity is ready to move
+    if !ready_to_move(state, vid) {
+        return; // Not ready to move yet
+    }
+
+    // get current position and direction
+    let current_pos = state.entity_manager.get_entity(vid).unwrap().pos.as_ivec2();
+    let direction = state.entity_manager.get_entity(vid).unwrap().direction;
+
+    // calculate new position based on direction
+    let new_pos = current_pos + direction;
+
+    // check if new position is within bounds of the stage
+    if !state.stage.in_bounds(new_pos) {
+        // mark for destruction if out of bounds
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            entity.marked_for_destruction = true;
+            println!("Train out of bounds, marking for destruction: {:?}", vid);
+        }
+        return;
+    }
+
+    // check if the target tile is a rail tile
+    let target_tile = state
+        .stage
+        .get_tile_type(new_pos.x as usize, new_pos.y as usize);
+    if target_tile.is_none() || target_tile.unwrap() != Tile::Rail {
+        // set own hp to 0 and mark for destruction
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            entity.health = 0;
+            println!(
+                "Train hit non-rail tile, marking for destruction: {:?}",
+                vid
+            );
+        }
+        return;
+    }
+
+    // check for other trains in the target position
+    // pub spatial_grid: Vec<Vec<Vec<VID>>>,
+
+    let other_trains_in_target = state.spatial_grid[new_pos.x as usize][new_pos.y as usize]
+        .iter()
+        .any(|&other_vid| {
+            if let Some(other_entity) = state.entity_manager.get_entity(other_vid) {
+                other_entity.type_ == EntityType::Train && other_vid != vid
+            } else {
+                false // Entity not found, treat as not a train
+            }
+        });
+
+    if other_trains_in_target {
+        // do not move
+        return;
+    }
+
+    // move the entity to the new position
+    let moved = move_entity_on_grid(state, audio, vid, new_pos, true, true, false);
+    let mut hit_entities: Vec<VID> = vec![];
+    if moved {
+        // get the target tile data
+        // damage all entities in the target tile (except trains)
+        for entity in state.spatial_grid[new_pos.x as usize][new_pos.y as usize]
+            .iter()
+            .filter_map(|&vid| state.entity_manager.get_entity(vid))
+        {
+            if entity.type_ != crate::entity::EntityType::Train {
+                hit_entities.push(entity.vid);
+            }
+        }
+
+        // fetch a target position, if none, dont do this part
+
+        pub struct NewTrain {
+            pub pos: Vec2,
+            pub direction: IVec2,
+            pub sprite: Option<Sprite>,
+        }
+        let mut new_train: Option<NewTrain> = None;
+        if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
+            if let Some(target_pos) = entity.target_pos {
+                // if counter_a is 0, spawn a train at the target position
+                // if counter_a is 1, spawn a caboose at the target position
+                // if counter_a is 2-inf, spawn a traincar at the target position
+                if entity.counter_a >= 2.0 {
+                    // spawn a traincar
+                    new_train = Some(NewTrain {
+                        pos: target_pos,
+                        direction: entity.direction,
+                        sprite: Some(Sprite::TrainCarA),
+                    });
+                } else if entity.counter_a > 0.0 {
+                    // spawn a caboose
+                    new_train = Some(NewTrain {
+                        pos: target_pos,
+                        direction: entity.direction,
+                        sprite: Some(Sprite::Caboose),
+                    });
+                }
+                // decrement the counter_a
+                entity.counter_a -= 1.0;
+                entity.counter_a = entity.counter_a.max(0.0);
+            }
+        }
+
+        // if we have a new train, spawn it
+        if let Some(new_train) = new_train {
+            if let Some(new_entity_vid) = state.entity_manager.new_entity() {
+                if let Some(entity) = state.entity_manager.get_entity_mut(new_entity_vid) {
+                    init_as_train(entity);
+                    entity.pos = new_train.pos; // Set the position to the target position
+                    entity.direction = new_train.direction; // Set the direction to the same as the train
+                    entity.sprite = new_train.sprite; // Set the sprite to the train car sprite
+                }
+            }
+        }
+    }
+
+    // apply damage to all hit entities
+    for hit_vid in hit_entities {
+        if let Some(hit_entity) = state.entity_manager.get_entity_mut(hit_vid) {
+            // apply 1000 damage
+            hit_entity.health = hit_entity.health.saturating_sub(1000);
         }
     }
 }

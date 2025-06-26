@@ -1,11 +1,13 @@
-use glam::IVec2;
+use glam::{IVec2, Vec2};
 
 use crate::{
     audio::{Audio, SoundEffect},
     entity::{Alignment, DamageType, VID},
     entity_behavior::{attack, AttackType},
+    entity_templates::init_as_rail_layer,
     graphics::Graphics,
     item::{Item, ItemType},
+    render::TILE_SIZE,
     stage::TileData,
     state::State,
     tile::{self, damage_tile},
@@ -67,6 +69,7 @@ fn use_item_internal_lookup(
         ItemType::Bandage => use_bandage(state, audio, user_vid, item),
         ItemType::Bandaid => use_bandaid(state, audio, user_vid, item),
         ItemType::Fist => use_fist(state, graphics, audio, user_vid, item),
+        ItemType::ConductorHat => use_conductor_hat(state, audio, user_vid, item),
     }
 }
 
@@ -107,6 +110,7 @@ pub fn use_wall(
                 breakable: true,
                 variant: 0,
                 flip_speed: 0,
+                rot: 0.0,
             },
         );
 
@@ -253,6 +257,44 @@ pub fn use_fist(
 
     audio.play_sound_effect(SoundEffect::CantUse);
     false
+}
+
+pub fn use_conductor_hat(
+    state: &mut State,
+    audio: &mut Audio,
+    user_vid: Option<VID>,
+    _item: &Item,
+) -> bool {
+    // get the user position
+    // calculate the right most position on the map at the players y coordinate
+    // spawn a train at that position
+
+    let user_vid = match user_vid {
+        Some(vid) => vid,
+        None => return false,
+    };
+
+    let user_pos = match state.entity_manager.get_entity(user_vid) {
+        Some(e) => e.pos,
+        None => return false,
+    };
+
+    // Calculate the rightmost position on the map at the user's y coordinate
+    let stage_width = state.stage.get_width() as f32;
+    let rightmost_x = stage_width;
+    let user_y = user_pos.y;
+    let rail_layer_pos = Vec2::new(rightmost_x, user_y.floor());
+    // Spawn the train entity
+    if let Some(vid) = state.entity_manager.new_entity() {
+        if let Some(rail_layer) = state.entity_manager.get_entity_mut(vid) {
+            init_as_rail_layer(rail_layer);
+            rail_layer.pos = rail_layer_pos;
+            rail_layer.direction = IVec2::new(-1, 0); // Rail layer moves left
+        }
+    }
+
+    audio.play_sound_effect(SoundEffect::DistantTrainSound);
+    true
 }
 
 pub fn get_item_use_pos(state: &State, graphics: &Graphics) -> Option<IVec2> {

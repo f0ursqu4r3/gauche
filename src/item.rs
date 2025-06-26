@@ -7,6 +7,7 @@ pub enum ItemType {
     Bandage,
     Bandaid,
     Fist,
+    ConductorHat,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,7 +45,27 @@ pub struct Item {
     // pub attributes: Vec<ItemAttributes>,
 }
 
+pub fn can_use_item(item: &Item) -> bool {
+    // Check if the item is usable and not on cooldown
+    item.usable && item.use_cooldown_countdown <= 0.0
+}
+
 impl Item {
+    /// Returns whether the item stack is stackable (i.e., its max_count > 1).
+    pub fn is_stackable(&self) -> bool {
+        self.max_count > 1
+    }
+
+    pub fn step_cooldown(&mut self, dt: f32) {
+        // Decrease the cooldown countdown by the elapsed time
+        if self.use_cooldown_countdown > 0.0 {
+            self.use_cooldown_countdown -= dt;
+            if self.use_cooldown_countdown < 0.0 {
+                self.use_cooldown_countdown = 0.0; // Ensure it doesn't go negative
+            }
+        }
+    }
+
     /// Creates a new item stack of a given type and count.
     pub fn new(kind: ItemType) -> Self {
         match kind {
@@ -137,26 +158,24 @@ impl Item {
                 range: 1.0,     // Fists can hit adjacent tiles
                 sprite: Some(Sprite::Fist),
             },
+            // conductor hat
+            ItemType::ConductorHat => Item {
+                type_: ItemType::ConductorHat,
+                name: "Conductor Hat",
+                description: "choo choo",
+                marked_for_destruction: false,
+                can_be_placed: false,
+                usable: true,
+                can_be_dropped: true,
+                consume_on_use: true,
+                max_count: 1,      // Hats are not stackable
+                count: 1,          // Always 1 for hats
+                use_cooldown: 0.0, // Hats don't have a cooldown
+                use_cooldown_countdown: 0.0,
+                min_range: 0.0,
+                range: 0.0,
+                sprite: Some(Sprite::ConductorHat),
+            },
         }
     }
-
-    /// Returns whether the item stack is stackable (i.e., its max_count > 1).
-    pub fn is_stackable(&self) -> bool {
-        self.max_count > 1
-    }
-
-    pub fn step_cooldown(&mut self, dt: f32) {
-        // Decrease the cooldown countdown by the elapsed time
-        if self.use_cooldown_countdown > 0.0 {
-            self.use_cooldown_countdown -= dt;
-            if self.use_cooldown_countdown < 0.0 {
-                self.use_cooldown_countdown = 0.0; // Ensure it doesn't go negative
-            }
-        }
-    }
-}
-
-pub fn can_use_item(item: &Item) -> bool {
-    // Check if the item is usable and not on cooldown
-    item.usable && item.use_cooldown_countdown <= 0.0
 }

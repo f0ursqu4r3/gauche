@@ -50,9 +50,12 @@ pub enum SoundEffect {
     Chick,
     Hen,
     Rooster,
+    DistantTrainSound,
+    RailPlace,
+    TrainPassing,
 }
 
-pub const SOUND_EFFECT_COOLDOWN: f32 = 0.1;
+pub const SOUND_EFFECT_COOLDOWN: f32 = 0.05;
 
 /// The main struct for managing all game audio. It holds the loaded songs and sounds.
 pub struct Audio<'a> {

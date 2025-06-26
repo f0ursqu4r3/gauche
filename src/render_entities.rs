@@ -68,6 +68,11 @@ pub fn render_entities(
     player_pos_pixels: Option<Vec2>,
 ) {
     for entity in state.entity_manager.iter().filter(|e| e.active) {
+        // if entity has no sprite, skip rendering
+        if entity.sprite.is_none() {
+            continue;
+        }
+
         // Player is always fully visible; other entities fade with distance.
         let alpha = if entity.type_ == EntityType::Player {
             255
@@ -79,7 +84,8 @@ pub fn render_entities(
 
         // Only draw the entity if it's visible.
         if alpha > 0 {
-            if let Some(texture) = graphics.get_sprite_texture(entity.sprite) {
+            let sprite = entity.sprite.unwrap();
+            if let Some(texture) = graphics.get_sprite_texture(sprite) {
                 let entity_pixel_pos = entity.pos * TILE_SIZE;
                 let source_rec =
                     Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
