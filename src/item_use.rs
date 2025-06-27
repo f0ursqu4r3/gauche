@@ -10,7 +10,7 @@ use crate::{
     render::TILE_SIZE,
     stage::TileData,
     state::State,
-    tile::{self, damage_tile},
+    tile::{self, damage_tile, Tile},
     utils::new_york_dist,
 };
 
@@ -100,19 +100,15 @@ pub fn use_wall(
         && tile::can_build_on(state, target_tile_pos)
     {
         // Place the wall.
-        state.stage.set_tile(
-            target_tile_pos.x as usize,
-            target_tile_pos.y as usize,
-            TileData {
-                tile: tile::Tile::Wall,
-                hp: 100, // Example: full health for the block
-                max_hp: 100,
-                breakable: true,
-                variant: 0,
-                flip_speed: 0,
-                rot: 0.0,
-            },
-        );
+        let mut tile = TileData::default();
+        tile.tile = Tile::Wall;
+        tile.hp = 100;
+        tile.max_hp = 100;
+        tile.breakable = true;
+
+        state
+            .stage
+            .set_tile(target_tile_pos.x as usize, target_tile_pos.y as usize, tile);
 
         audio.play_sound_effect(SoundEffect::BlockLand);
         return true; // Success

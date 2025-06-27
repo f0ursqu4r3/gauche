@@ -27,8 +27,23 @@ pub struct TileData {
     pub variant: u8,
     pub flip_speed: u16,
     pub rot: f32,
+    pub shake: f32,
 }
 
+impl Default for TileData {
+    fn default() -> Self {
+        TileData {
+            tile: Tile::None,
+            hp: 0,
+            max_hp: 0,
+            breakable: false,
+            variant: 0,
+            flip_speed: 0,
+            rot: 0.0,
+            shake: 0.0,
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct Stage {
     pub stage_type: StageType,
@@ -37,21 +52,7 @@ pub struct Stage {
 
 impl Stage {
     pub fn new(stage_type: StageType, width: usize, height: usize) -> Stage {
-        let tiles = vec![
-            vec![
-                TileData {
-                    tile: Tile::None,
-                    hp: 0,
-                    max_hp: 0,
-                    breakable: false,
-                    variant: 0,
-                    flip_speed: 0,
-                    rot: 0.0,
-                };
-                height
-            ];
-            width
-        ];
+        let tiles = vec![vec![TileData::default(); height]; width];
 
         Stage { stage_type, tiles }
     }
@@ -81,15 +82,7 @@ impl Stage {
     pub fn clear(&mut self) {
         for row in &mut self.tiles {
             for tile in row {
-                *tile = TileData {
-                    tile: Tile::None,
-                    hp: 0,
-                    max_hp: 0,
-                    breakable: false,
-                    variant: 0,
-                    flip_speed: 0,
-                    rot: 0.0,
-                };
+                *tile = TileData::default()
             }
         }
     }
@@ -157,52 +150,22 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
             // Set tile based on noise value thresholds.
             // Values around 0 will be void.
             if noise_value > 0.4 {
-                state.stage.set_tile(
-                    x,
-                    y,
-                    TileData {
-                        tile: Tile::Grass,
-                        hp: 0,
-                        max_hp: 0,
-                        breakable: false,
-                        variant: 0,
-                        flip_speed: 0,
-                        rot: 0.0,
-                    },
-                );
+                let mut tile = TileData::default();
+                tile.tile = Tile::Grass;
+                state.stage.set_tile(x, y, tile);
             } else if noise_value < -0.8 {
-                state.stage.set_tile(
-                    x,
-                    y,
-                    TileData {
-                        tile: Tile::Water,
-                        hp: 0,
-                        max_hp: 0,
-                        breakable: false,
-                        variant: // randomize water variant
-                            if random::<bool>() {
-                                0 // Variant 0 for water
-                            } else {
-                                1 // Variant 1 for water
-                            },
-                        flip_speed: FRAMES_PER_SECOND as u16, // Flip every 2 seconds
-                        rot: 0.0,
-                    },
-                );
+                let mut tile = TileData::default();
+                tile.tile = Tile::Water;
+                tile.variant = if random::<bool>() {
+                    0 // Variant 0 for dirt
+                } else {
+                    1 // Variant 1 for dirt
+                };
+                tile.flip_speed = FRAMES_PER_SECOND as u16; // Flip every 2 seconds
+                state.stage.set_tile(x, y, tile);
             } else {
-                state.stage.set_tile(
-                    x,
-                    y,
-                    TileData {
-                        tile: Tile::None,
-                        hp: 0,
-                        max_hp: 0,
-                        breakable: false,
-                        variant: 0,
-                        flip_speed: 0,
-                        rot: 0.0,
-                    },
-                );
+                let tile = TileData::default();
+                state.stage.set_tile(x, y, tile);
             }
         }
     }
@@ -293,19 +256,9 @@ pub fn flip_stage_tiles(state: &mut State) {
                 if tile_data.flip_speed > 0 && state.frame % tile_data.flip_speed as u32 == 0 {
                     let new_variant =
                         (tile_data.variant + 1) % get_tile_variants(&tile_data).len() as u8;
-                    state.stage.set_tile(
-                        x,
-                        y,
-                        TileData {
-                            tile: tile_data.tile,
-                            hp: tile_data.hp,
-                            max_hp: tile_data.max_hp,
-                            breakable: tile_data.breakable,
-                            variant: new_variant,
-                            flip_speed: tile_data.flip_speed,
-                            rot: 0.0,
-                        },
-                    );
+                    let mut new_tile_data = tile_data.clone();
+                    new_tile_data.variant = new_variant;
+                    state.stage.set_tile(x, y, new_tile_data);
                 }
             }
         }

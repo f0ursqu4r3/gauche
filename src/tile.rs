@@ -165,34 +165,20 @@ pub fn on_tile_break(state: &mut State, audio: &mut Audio, tile_pos: IVec2, tile
     match tile_data.tile {
         Tile::Wall => {
             // A broken wall becomes a non-breakable 'Ruin' tile.
-            let new_tile_data = TileData {
-                tile: Tile::Ruin,
-                hp: 0,
-                max_hp: 0,
-                breakable: false,
-                variant: 0,
-                flip_speed: 0,
-                rot: 0.0,
-            };
+            let mut tile = TileData::default();
+            tile.tile = Tile::Ruin;
             state
                 .stage
-                .set_tile(tile_pos.x as usize, tile_pos.y as usize, new_tile_data);
+                .set_tile(tile_pos.x as usize, tile_pos.y as usize, tile);
             // TODO: In the future, you could drop a "stone" item here.
         }
         _ => {
             // By default, most broken tiles just become empty space.
-            let new_tile_data = TileData {
-                tile: Tile::None,
-                hp: 0,
-                max_hp: 0,
-                breakable: false,
-                variant: 0,
-                flip_speed: 0,
-                rot: 0.0,
-            };
-            state
-                .stage
-                .set_tile(tile_pos.x as usize, tile_pos.y as usize, new_tile_data);
+            state.stage.set_tile(
+                tile_pos.x as usize,
+                tile_pos.y as usize,
+                TileData::default(),
+            );
         }
     }
 

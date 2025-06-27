@@ -689,19 +689,14 @@ pub fn step_rail_layer(state: &mut State, audio: &mut Audio, vid: VID) {
     //     pub variant: u8,
     //     pub flip_speed: u16,
     // }
-    state.stage.set_tile(
-        new_pos.x as usize,
-        new_pos.y as usize,
-        TileData {
-            tile: Tile::Rail,
-            hp: 0, // Rail tiles are not breakable
-            max_hp: 0,
-            breakable: false,
-            variant: 0,    // No variant for rail tiles
-            flip_speed: 0, // No flip speed for rail tiles
-            rot: 90.0,     // No rotation for rail tiles
-        },
-    );
+    let mut tile = TileData::default();
+    tile.tile = Tile::Rail; // Set the tile to Rail
+    tile.breakable = false; // Rail tiles are not breakable
+    tile.rot = 90.0; // No rotation for rail tiles
+
+    state
+        .stage
+        .set_tile(new_pos.x as usize, new_pos.y as usize, tile);
 
     // move the entity to the new position
     move_entity_on_grid(state, audio, vid, new_pos, true, true, false);
