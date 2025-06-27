@@ -27,9 +27,8 @@ pub struct Item {
     pub description: &'static str,
     pub marked_for_destruction: bool, // whether this item should be destroyed
 
-    pub can_be_placed: bool,
     pub usable: bool,
-    pub can_be_dropped: bool,
+    pub droppable: bool,
 
     pub max_count: u32,              // maximum count in this stack
     pub count: u32,                  // current count in this stack
@@ -74,9 +73,9 @@ impl Item {
                 name: "Wall",
                 description: "...a wall",
                 marked_for_destruction: false,
-                can_be_placed: true,
-                usable: false,
-                can_be_dropped: true,
+
+                usable: true,
+                droppable: true,
                 max_count: 99,
                 count: 1, // Will be set below
                 consume_on_use: true,
@@ -92,9 +91,9 @@ impl Item {
                 name: "Medkit",
                 description: "first aid, second aid, cool-aid",
                 marked_for_destruction: false,
-                can_be_placed: false,
+
                 usable: true,
-                can_be_dropped: true,
+                droppable: true,
                 consume_on_use: true,
                 max_count: 10, // Medkits are not stackable
                 count: 1,
@@ -110,9 +109,9 @@ impl Item {
                 name: "Bandage",
                 description: "a bandage to stop the bleeding",
                 marked_for_destruction: false,
-                can_be_placed: false,
+
                 usable: true,
-                can_be_dropped: true,
+                droppable: true,
                 consume_on_use: true,
                 max_count: 10,
                 count: 1,
@@ -128,9 +127,9 @@ impl Item {
                 name: "Bandaid",
                 description: "a bandaid to stop the bleeding",
                 marked_for_destruction: false,
-                can_be_placed: false,
+
                 usable: true,
-                can_be_dropped: true,
+                droppable: true,
                 consume_on_use: true,
                 max_count: 20,
                 count: 1,
@@ -146,9 +145,9 @@ impl Item {
                 name: "Fist",
                 description: "your fist",
                 marked_for_destruction: false,
-                can_be_placed: false,
+
                 usable: true,
-                can_be_dropped: true,
+                droppable: true,
                 consume_on_use: false,
                 max_count: 1, // Fists are not stackable
                 count: 1,     // Always 1 for fists
@@ -164,9 +163,9 @@ impl Item {
                 name: "Conductor Hat",
                 description: "choo choo",
                 marked_for_destruction: false,
-                can_be_placed: false,
+
                 usable: true,
-                can_be_dropped: true,
+                droppable: true,
                 consume_on_use: true,
                 max_count: 1,      // Hats are not stackable
                 count: 1,          // Always 1 for hats

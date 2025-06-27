@@ -18,6 +18,8 @@ pub fn init_as_player(entity: &mut Entity) {
     entity.health = 100;
     entity.max_hp = 100;
     entity.size = Vec2::new(1.0, 1.0); // Player is larger than other entities
+    entity.death_sound = Some(SoundEffect::AnimalCrush1);
+    entity.attackable = true;
 
     let mut wall_item = Item::new(ItemType::Wall);
     wall_item.count = 99; // Start with 99 walls
@@ -56,6 +58,8 @@ pub fn init_as_zombie(entity: &mut Entity) {
     entity.attack_cooldown = 1.0;
     entity.health = 40;
     entity.max_hp = 40;
+    entity.death_sound = Some(SoundEffect::AnimalCrush1);
+    entity.attackable = true;
     // randomize move cooldown timer in range
     entity.move_cooldown_countdown = rand::random::<f32>() * entity.move_cooldown;
     // randomize step sound, 1 or 2
@@ -90,6 +94,8 @@ pub fn init_as_chicken(entity: &mut Entity) {
     entity.impassable = true;
     entity.alignment = Alignment::Neutral;
     entity.mood = Mood::Wander;
+    entity.death_sound = Some(SoundEffect::AnimalCrush1);
+    entity.attackable = true;
 
     match chicken_type {
         ChickenType::Chick => {
@@ -126,7 +132,6 @@ pub fn init_as_chicken(entity: &mut Entity) {
 // init as rail_layer
 // this is a special entity that zips across the stage and places rails
 pub fn init_as_rail_layer(entity: &mut Entity) {
-    println!("init_as_rail_layer");
     entity.active = true;
     entity.type_ = EntityType::RailLayer;
     entity.sprite = None;
@@ -138,11 +143,11 @@ pub fn init_as_rail_layer(entity: &mut Entity) {
     entity.health = 10000000;
     entity.max_hp = 10000000;
     entity.damage_vulnerability = DamageVulnerability::Immune;
+    entity.death_sound = None;
+    entity.attackable = false;
 }
 
-// init as train
 pub fn init_as_train(entity: &mut Entity) {
-    println!("init_as_train");
     entity.active = true;
     entity.type_ = EntityType::Train;
     entity.sprite = Some(Sprite::TrainHead);
@@ -153,6 +158,22 @@ pub fn init_as_train(entity: &mut Entity) {
     entity.move_cooldown_countdown = entity.move_cooldown;
     entity.health = 10000000;
     entity.max_hp = 10000000;
-    entity.damage_vulnerability = DamageVulnerability::Immune;
+    entity.damage_vulnerability = DamageVulnerability::NotImmune;
     entity.size = Vec2::new(2.0, 2.0); // Train is larger than other entities
+    entity.death_sound = Some(SoundEffect::BoxBreak);
+    entity.attackable = true;
+}
+
+pub fn init_as_item(entity: &mut Entity, item: Item) {
+    entity.active = true;
+    entity.type_ = EntityType::Item;
+    entity.item = Some(item);
+    entity.size = Vec2::new(0.5, 0.5);
+    entity.impassable = false;
+    entity.damage_vulnerability = DamageVulnerability::Immune;
+    entity.health = 1000;
+    entity.max_hp = 1000;
+    entity.sprite = item.sprite;
+    entity.alignment = Alignment::Neutral;
+    entity.attackable = false;
 }

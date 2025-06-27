@@ -46,13 +46,13 @@ pub enum SoundEffect {
     Punch1,
     ClothRip,
     CantUse,
-    // chickens
     Chick,
     Hen,
     Rooster,
     DistantTrainSound,
     RailPlace,
     TrainPassing,
+    Drop,
 }
 
 pub const SOUND_EFFECT_COOLDOWN: f32 = 0.05;

@@ -17,9 +17,7 @@ pub fn process_input(
     graphics: &mut Graphics,
     dt: f32,
 ) {
-    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ESCAPE)
-        || rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_Q)
-    {
+    if rl.is_key_pressed(raylib::consts::KeyboardKey::KEY_ESCAPE) {
         state.running = false;
     }
 
@@ -109,11 +107,25 @@ pub struct PlayingInputs {
     pub num_row_9: bool,
     pub num_row_0: bool,
 
-    pub arrow_left: bool,
-    pub arrow_right: bool,
-    pub arrow_up: bool,
-    pub arrow_down: bool,
-    pub space: bool, // use item in place
+    pub select_inventory_index_0: bool,
+    pub select_inventory_index_1: bool,
+    pub select_inventory_index_2: bool,
+    pub select_inventory_index_3: bool,
+    pub select_inventory_index_4: bool,
+    pub select_inventory_index_5: bool,
+    pub select_inventory_index_6: bool,
+    pub select_inventory_index_7: bool,
+    pub select_inventory_index_8: bool,
+    pub select_inventory_index_9: bool,
+
+    pub use_left: bool,
+    pub use_right: bool,
+    pub use_up: bool,
+    pub use_down: bool,
+    pub use_center: bool,
+
+    pub pick_up: bool,
+    pub drop: bool,
 }
 impl PlayingInputs {
     pub fn new() -> PlayingInputs {
@@ -140,12 +152,26 @@ impl PlayingInputs {
             num_row_9: false,
             num_row_0: false,
 
-            arrow_left: false,
-            arrow_right: false,
-            arrow_up: false,
-            arrow_down: false,
+            select_inventory_index_0: false,
+            select_inventory_index_1: false,
+            select_inventory_index_2: false,
+            select_inventory_index_3: false,
+            select_inventory_index_4: false,
+            select_inventory_index_5: false,
+            select_inventory_index_6: false,
+            select_inventory_index_7: false,
+            select_inventory_index_8: false,
+            select_inventory_index_9: false,
 
-            space: false, // use item in place
+            use_left: false,
+            use_right: false,
+            use_up: false,
+            use_down: false,
+
+            use_center: false,
+
+            pick_up: false,
+            drop: false,
         }
     }
 }
@@ -285,17 +311,49 @@ pub fn set_playing_inputs(rl: &mut RaylibHandle, state: &mut State, dt: f32) {
 
     // arrow inputs
     {
-        new_inputs.arrow_left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT);
-        new_inputs.arrow_right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT);
-        new_inputs.arrow_up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_UP);
-        new_inputs.arrow_down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_DOWN);
+        new_inputs.use_left = rl.is_key_down(raylib::consts::KeyboardKey::KEY_LEFT);
+        new_inputs.use_right = rl.is_key_down(raylib::consts::KeyboardKey::KEY_RIGHT);
+        new_inputs.use_up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_UP);
+        new_inputs.use_down = rl.is_key_down(raylib::consts::KeyboardKey::KEY_DOWN);
     }
 
-    new_inputs.space = rl.is_key_down(raylib::consts::KeyboardKey::KEY_SPACE)
+    new_inputs.use_center = rl.is_key_down(raylib::consts::KeyboardKey::KEY_SPACE)
         || rl.is_gamepad_button_down(
             0,
             raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
         );
+
+    // pick up and drop
+    // // keyboard
+    {
+        new_inputs.pick_up = rl.is_key_down(raylib::consts::KeyboardKey::KEY_E);
+        new_inputs.drop = rl.is_key_down(raylib::consts::KeyboardKey::KEY_Q);
+    }
+    // // gamepad
+    {
+        new_inputs.pick_up |= rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
+        );
+        new_inputs.drop |= rl.is_gamepad_button_down(
+            0,
+            raylib::consts::GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
+        );
+    }
+
+    // select inventory index via numpad
+    {
+        new_inputs.select_inventory_index_0 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_1);
+        new_inputs.select_inventory_index_1 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_2);
+        new_inputs.select_inventory_index_2 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_3);
+        new_inputs.select_inventory_index_3 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_4);
+        new_inputs.select_inventory_index_4 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_5);
+        new_inputs.select_inventory_index_5 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_6);
+        new_inputs.select_inventory_index_6 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_7);
+        new_inputs.select_inventory_index_7 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_8);
+        new_inputs.select_inventory_index_8 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_9);
+        new_inputs.select_inventory_index_9 = rl.is_key_down(raylib::consts::KeyboardKey::KEY_KP_0);
+    }
 
     let raw_mouse_pos = rl.get_mouse_position();
     new_inputs.mouse_pos = Vec2::new(raw_mouse_pos.x, raw_mouse_pos.y);
@@ -503,11 +561,23 @@ impl PlayingInputDebounceTimers {
             num_row_8: playing_inputs.num_row_8,
             num_row_9: playing_inputs.num_row_9,
             num_row_0: playing_inputs.num_row_0,
-            arrow_left: playing_inputs.arrow_left,
-            arrow_right: playing_inputs.arrow_right,
-            arrow_up: playing_inputs.arrow_up,
-            arrow_down: playing_inputs.arrow_down,
-            space: playing_inputs.space, // use item in place
+            select_inventory_index_0: playing_inputs.select_inventory_index_0,
+            select_inventory_index_1: playing_inputs.select_inventory_index_1,
+            select_inventory_index_2: playing_inputs.select_inventory_index_2,
+            select_inventory_index_3: playing_inputs.select_inventory_index_3,
+            select_inventory_index_4: playing_inputs.select_inventory_index_4,
+            select_inventory_index_5: playing_inputs.select_inventory_index_5,
+            select_inventory_index_6: playing_inputs.select_inventory_index_6,
+            select_inventory_index_7: playing_inputs.select_inventory_index_7,
+            select_inventory_index_8: playing_inputs.select_inventory_index_8,
+            select_inventory_index_9: playing_inputs.select_inventory_index_9,
+            use_left: playing_inputs.use_left,
+            use_right: playing_inputs.use_right,
+            use_up: playing_inputs.use_up,
+            use_down: playing_inputs.use_down,
+            use_center: playing_inputs.use_center, // use item in place
+            pick_up: playing_inputs.pick_up,
+            drop: playing_inputs.drop,
         }
     }
 }

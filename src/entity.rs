@@ -18,6 +18,7 @@ pub enum EntityType {
     Chicken,
     RailLayer,
     Train,
+    Item,
 }
 
 /** these are the low level current actions of the entity */
@@ -149,7 +150,11 @@ pub struct Entity {
 
     pub inventory: Inventory,
     pub growl: Option<SoundEffect>,
+    pub death_sound: Option<SoundEffect>,
     pub direction: IVec2,
+
+    pub item: Option<Item>,
+    pub attackable: bool,
 }
 
 impl Entity {
@@ -202,7 +207,11 @@ impl Entity {
 
             inventory: Inventory::new(),
             growl: None,
+            death_sound: None,
             direction: IVec2::new(0, 0),
+
+            item: None,
+            attackable: true,
         }
     }
 

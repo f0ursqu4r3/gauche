@@ -29,7 +29,7 @@ impl Inventory {
     ///
     /// # Logic Priority:
     /// 1. **Stack First:** Scans the entire inventory to merge with any compatible, non-full stacks.
-    /// 2. **Fill Empty Slot (Overflow):** If the item remains, finds the first available empty slot and places it there.
+    /// 2. **Fill Empty Slot (Overflow):** If the item remains, finds the first available empty slot *prioritizing the selected slot if empty* and places it there.
     /// 3. **Swap with Selected (Last Resort):** Only if the inventory is completely full, it will swap the incoming
     ///    item with the one in the `selected_index` slot.
     ///
@@ -55,9 +55,21 @@ impl Inventory {
             }
         }
 
-        // --- 2. If item remains, find any empty slot (Overflow) ---
-        if self.entries.len() < MAX_SLOTS {
-            // Find the first available inventory index from 0..MAX_SLOTS
+        // --- 2. If item remains, find an empty slot, prioritizing the selected one ---
+        if !self.is_full() {
+            // 2a. Prioritize the selected slot if it's empty.
+            let is_selected_slot_empty =
+                !self.entries.iter().any(|e| e.index == self.selected_index);
+            if is_selected_slot_empty {
+                self.entries.push(InvEntry {
+                    index: self.selected_index, // Use the selected index
+                    item: item_to_add,
+                });
+                self.entries.sort_by_key(|e| e.index); // Keep sorted
+                return None; // Item placed in the selected empty slot.
+            }
+
+            // 2b. If the selected slot was taken, find any other empty slot.
             if let Some(slot_index) =
                 (0..MAX_SLOTS).find(|i| !self.entries.iter().any(|e| e.index == *i))
             {
@@ -65,13 +77,12 @@ impl Inventory {
                     index: slot_index,
                     item: item_to_add,
                 });
-                self.entries.sort_by_key(|e| e.index); // Keep sorted for consistency
-                return None; // Item was successfully placed in an empty slot.
+                self.entries.sort_by_key(|e| e.index); // Keep sorted
+                return None; // Item placed in another empty slot.
             }
         }
 
         // --- 3. Last Resort: Inventory is full, swap with the selected slot ---
-        // Find the position in the `entries` vector that corresponds to our selected UI index.
         if let Some(pos_in_vec) = self
             .entries
             .iter()
@@ -83,9 +94,19 @@ impl Inventory {
             return Some(old_item); // Return the swapped-out item.
         }
 
-        // Failsafe: If inventory is full but the selected slot is somehow empty (e.g. an item was just used up),
-        // this would fail. In that case, we can't add the item, so we return it.
+        // Failsafe: If inventory is full but the selected slot is somehow empty (which can happen
+        // if an item was just used up), this would fail. We can't add the item, so we return it.
         Some(item_to_add)
+    }
+
+    /// Check if full.
+    pub fn is_full(&self) -> bool {
+        self.entries.len() >= MAX_SLOTS
+    }
+
+    /// Check if empty.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     /// Removes a specific number of items from a slot.
@@ -102,6 +123,11 @@ impl Inventory {
     /// Gets an immutable reference to an inventory entry at a specific index.
     pub fn get(&self, index: usize) -> Option<&InvEntry> {
         self.entries.iter().find(|e| e.index == index)
+    }
+
+    /// Return true if there is an entry in the selected slot.
+    pub fn has_selected_entry(&self) -> bool {
+        self.get(self.selected_index).is_some()
     }
 
     /// Gets a mutable reference to an inventory entry at a specific index.
@@ -127,6 +153,19 @@ impl Inventory {
     /// Gets a mutable reference to the entry in the currently selected slot.
     pub fn selected_entry_mut(&mut self) -> Option<&mut InvEntry> {
         self.get_mut(self.selected_index)
+    }
+
+    /// Remove selected entry from the inventory.
+    pub fn remove_selected_entry(&mut self) -> Option<Item> {
+        if let Some(pos) = self
+            .entries
+            .iter()
+            .position(|e| e.index == self.selected_index)
+        {
+            let removed_entry = self.entries.remove(pos);
+            return Some(removed_entry.item);
+        }
+        None
     }
 
     /// Sets the selected index, clamping it to the valid range [0, MAX_SLOTS - 1].

@@ -41,6 +41,12 @@ a train... (idk why this is funny)
 add a fire function of some sort (maybe a torch item)
     like an effect of the currently selected item in the inventory
 
-try:
-    picking up items
-    dropping items
+
+* dropping items - q
+* picking up items - e
+* bugfix the item insert overflow not priorizing selected slot
+
+add ground item detail view
+move item pickup to helpers 
+make a grabby entity that will come pick up items
+add a sound when picking up items

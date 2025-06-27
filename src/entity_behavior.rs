@@ -73,6 +73,13 @@ pub fn growl_sometimes(state: &mut State, audio: &mut Audio, vid: VID) {
         }
     }
 
+    // if entity does not have a growl sound, return
+    if let Some(entity) = state.entity_manager.get_entity(vid) {
+        if entity.growl.is_none() {
+            return;
+        }
+    }
+
     pub const GROWL_CHANCE: f32 = 0.0001;
     if random_range(0.0..1.0) < GROWL_CHANCE {
         let pos = state.entity_manager.get_entity(vid).unwrap().pos;
@@ -127,6 +134,13 @@ pub fn attack(
         || state.entity_manager.get_entity(*attacked).is_none()
     {
         return; // Entity not found, exit early
+    }
+
+    // if attacked is not attackable, return
+    if let Some(attacked_entity) = state.entity_manager.get_entity(*attacked) {
+        if !attacked_entity.attackable {
+            return;
+        }
     }
 
     // play sound effect based on attack type, scale with distance to player if there is a player
@@ -527,6 +541,7 @@ pub fn on_entity_death(state: &mut State, audio: &mut Audio, vid: VID) {
             EntityType::Chicken => SoundEffect::AnimalCrush2,
             EntityType::RailLayer => SoundEffect::BoxBreak,
             EntityType::Train => SoundEffect::BoxBreak,
+            EntityType::Item => SoundEffect::BoxBreak,
         };
         let sound_loudness = calc_sound_loudness_from_player_dist_falloff(
             state,
@@ -643,13 +658,9 @@ pub fn step_rail_layer(state: &mut State, audio: &mut Audio, vid: VID) {
         }
         start_pos -= opposite_direction; // Step back to the last valid position
 
-        // print the start position
-        println!("new train layer {:?} start position: {:?}", vid, start_pos);
-
         // kill all entities in the start position instantly, just set health to 0
         // get all vids in the spatial grid at the start position
         if !state.stage.in_bounds(start_pos) {
-            println!("Start position out of bounds, cannot kill entities.");
             return;
         }
         let vids_in_start_pos = &state.spatial_grid[start_pos.x as usize][start_pos.y as usize];
@@ -745,7 +756,6 @@ pub fn step_train(state: &mut State, audio: &mut Audio, vid: VID) {
         // mark for destruction if out of bounds
         if let Some(entity) = state.entity_manager.get_entity_mut(vid) {
             entity.marked_for_destruction = true;
-            println!("Train out of bounds, marking for destruction: {:?}", vid);
         }
         return;
     }

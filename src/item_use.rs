@@ -27,7 +27,7 @@ pub fn use_item(
     item: &mut Item,
 ) -> bool {
     // An item can be used if it's 'usable' (like a medkit) or 'placeable' (like a wall).
-    let can_be_attempted = item.usable || item.can_be_placed;
+    let can_be_attempted = item.usable;
     if !can_be_attempted || item.use_cooldown_countdown > 0.0 || item.count == 0 {
         return false;
     }
@@ -294,10 +294,10 @@ pub fn use_conductor_hat(
 }
 
 pub fn get_item_use_pos(state: &State, graphics: &Graphics) -> Option<IVec2> {
-    if state.playing_inputs.arrow_down
-        || state.playing_inputs.arrow_up
-        || state.playing_inputs.arrow_left
-        || state.playing_inputs.arrow_right
+    if state.playing_inputs.use_down
+        || state.playing_inputs.use_up
+        || state.playing_inputs.use_left
+        || state.playing_inputs.use_right
     {
         // Use the tile in the direction of the arrow keys
         if let Some(player_vid) = state.player_vid {
@@ -305,21 +305,21 @@ pub fn get_item_use_pos(state: &State, graphics: &Graphics) -> Option<IVec2> {
                 let player_pos = player.pos.as_ivec2();
                 // do left right up down, but also diagonal if combined
                 let item_use_offset =
-                    if state.playing_inputs.arrow_down && state.playing_inputs.arrow_right {
+                    if state.playing_inputs.use_down && state.playing_inputs.use_right {
                         IVec2::new(1, 1)
-                    } else if state.playing_inputs.arrow_down && state.playing_inputs.arrow_left {
+                    } else if state.playing_inputs.use_down && state.playing_inputs.use_left {
                         IVec2::new(-1, 1)
-                    } else if state.playing_inputs.arrow_up && state.playing_inputs.arrow_right {
+                    } else if state.playing_inputs.use_up && state.playing_inputs.use_right {
                         IVec2::new(1, -1)
-                    } else if state.playing_inputs.arrow_up && state.playing_inputs.arrow_left {
+                    } else if state.playing_inputs.use_up && state.playing_inputs.use_left {
                         IVec2::new(-1, -1)
-                    } else if state.playing_inputs.arrow_down {
+                    } else if state.playing_inputs.use_down {
                         IVec2::new(0, 1)
-                    } else if state.playing_inputs.arrow_up {
+                    } else if state.playing_inputs.use_up {
                         IVec2::new(0, -1)
-                    } else if state.playing_inputs.arrow_left {
+                    } else if state.playing_inputs.use_left {
                         IVec2::new(-1, 0)
-                    } else if state.playing_inputs.arrow_right {
+                    } else if state.playing_inputs.use_right {
                         IVec2::new(1, 0)
                     } else {
                         return None; // No valid direction
@@ -338,7 +338,7 @@ pub fn get_item_use_pos(state: &State, graphics: &Graphics) -> Option<IVec2> {
                 .as_ivec2(),
         )
     // or space for use on self
-    } else if state.playing_inputs.space {
+    } else if state.playing_inputs.use_center {
         if let Some(player_vid) = state.player_vid {
             if let Some(player) = state.entity_manager.get_entity(player_vid) {
                 return Some(player.pos.as_ivec2());

@@ -579,7 +579,7 @@ pub fn render_selected_item_details(
             current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
         }
         {
-            let value = if item.can_be_dropped { "Yes" } else { "No" };
+            let value = if item.droppable { "Yes" } else { "No" };
             let key_text = "Droppable: ";
             screen.draw_text(
                 key_text,

@@ -13,6 +13,7 @@ use crate::{
         ready_to_move, step_attack_cooldown, step_inventory_item_cooldowns, step_move_cooldown,
         step_rail_layer, step_train, wander,
     },
+    entity_templates::init_as_item,
     graphics::Graphics,
     item::Item,
     item_use,
@@ -80,6 +81,9 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         return;
     };
 
+    // set inventory index from numpad
+    set_inventory_index_from_numpad(state);
+
     // --- Player Movement ---
     if let Some(player_vid) = state.player_vid {
         if ready_to_move(state, player_vid) {
@@ -119,12 +123,160 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         graphics.play_cam.pos = graphics.play_cam.pos.lerp(target_cam_pos, 0.1);
     }
 
+    // player item drop logic
+    /*
+       if no item in the selected slot, do nothing
+       if theres an item in the players inventory in the selected slot
+       check the tile to see if it has an entity on it
+       go through the entities on the tile to see if any of them are item type
+       if yes, cant drop
+       else, drop the item, and remove it from the inventory
+    */
+    let mut item_to_try_to_drop: Option<Item> = None;
+    let mut drop_location: Option<IVec2> = None;
+    if state.playing_inputs.drop {
+        if let Some(player_vid) = state.player_vid {
+            if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                // Check if the player has an item in the selected slot
+                if player.inventory.has_selected_entry() {
+                    let selected_index = player.inventory.selected_index;
+                    if let Some(entry) = player.inventory.get(selected_index) {
+                        // make a copy of the item to drop
+                        if entry.item.droppable {
+                            // Check if the tile is empty or has no item entities
+                            let tile_pos = player.pos.as_ivec2();
+                            item_to_try_to_drop = Some(entry.item);
+                            drop_location = Some(tile_pos);
+                        } else {
+                            audio.play_sound_effect(SoundEffect::CantUse);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if let (Some(item), Some(location)) = (item_to_try_to_drop, drop_location) {
+        // Check if the tile is empty or has no item entities
+        let tile_pos = location;
+        let entities_on_tile = state.spatial_grid[tile_pos.x as usize][tile_pos.y as usize]
+            .iter()
+            .filter_map(|vid| state.entity_manager.get_entity(*vid))
+            .collect::<Vec<&Entity>>();
+
+        if entities_on_tile.iter().all(|e| e.type_ != EntityType::Item) {
+            // make a new entity
+            if let Some(new_entity_vid) = state.entity_manager.new_entity() {
+                if let Some(entity) = state.entity_manager.get_entity_mut(new_entity_vid) {
+                    // Initialize the new entity as an item with the dropped item
+                    init_as_item(entity, item);
+                    entity.pos =
+                        Vec2::new(tile_pos.x as f32, tile_pos.y as f32) + Vec2::new(0.5, 0.5);
+                    state.add_entity_to_grid(new_entity_vid, tile_pos);
+
+                    // remove item from player inventory
+                    if let Some(player_vid) = state.player_vid {
+                        if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                            player.inventory.remove_selected_entry();
+                        }
+                    }
+                }
+            }
+        } else {
+            audio.play_sound_effect(SoundEffect::CantUse);
+        }
+    }
+
+    // player item pickup logic
+    /*
+       if item already in the selected slot, do nothing
+       if theres no item in the players inventory in the selected slot
+       check the tile to see if it has an entity on it
+       go through the entities on the tile to see if any of them are item type
+       if yes, add that item to the inventory
+       delete the item entity from the grid
+       else, do nothing
+    */
+    let mut item_to_try_to_pickup: Option<Item> = None;
+    let mut entity_of_item: Option<VID> = None;
+    let mut location_to_pickup: Option<IVec2> = None;
+    if state.playing_inputs.pick_up {
+        if let Some(player_vid) = state.player_vid {
+            if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                // Check if the tile has an item entity
+                let tile_pos = player.pos.as_ivec2();
+                let entities_on_tile = state.spatial_grid[tile_pos.x as usize][tile_pos.y as usize]
+                    .iter()
+                    .filter_map(|vid| state.entity_manager.get_entity(*vid))
+                    .collect::<Vec<&Entity>>();
+                // Find the first item entity on the tile
+                if let Some(item_entity) = entities_on_tile
+                    .iter()
+                    .find(|e| e.type_ == EntityType::Item)
+                {
+                    item_to_try_to_pickup = item_entity.item;
+                    entity_of_item = Some(item_entity.vid);
+                    location_to_pickup = Some(tile_pos);
+                } else {
+                    // No item entity found on the tile, play can't use sound
+                    audio.play_sound_effect(SoundEffect::CantUse);
+                }
+            }
+        }
+    }
+    if let (Some(item), Some(location), Some(entity_of_item_vid)) =
+        (item_to_try_to_pickup, location_to_pickup, entity_of_item)
+    {
+        // Check if the item can be added to the inventory
+        if let Some(player_vid) = state.player_vid {
+            if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+                let item_to_put_on_ground = player.inventory.insert(item);
+                // remove the item entity from the grid, and deactivate it
+                if state
+                    .entity_manager
+                    .get_entity_mut(entity_of_item_vid)
+                    .is_some()
+                {
+                    state.remove_entity_from_grid(entity_of_item_vid, location);
+                    state.entity_manager.set_inactive_vid(entity_of_item_vid);
+                }
+
+                // if an item was swapped out, drop it on the ground
+                if let Some(item_to_drop_put_on_ground) = item_to_put_on_ground {
+                    // Check if the tile is empty or has no item entities
+                    let tile_pos = location;
+                    let entities_on_tile = state.spatial_grid[tile_pos.x as usize]
+                        [tile_pos.y as usize]
+                        .iter()
+                        .filter_map(|vid| state.entity_manager.get_entity(*vid))
+                        .collect::<Vec<&Entity>>();
+
+                    if entities_on_tile.iter().all(|e| e.type_ != EntityType::Item) {
+                        // Create a new entity for the dropped item
+                        if let Some(new_entity_vid) = state.entity_manager.new_entity() {
+                            if let Some(entity) =
+                                state.entity_manager.get_entity_mut(new_entity_vid)
+                            {
+                                init_as_item(entity, item_to_drop_put_on_ground);
+                                entity.pos = Vec2::new(tile_pos.x as f32, tile_pos.y as f32)
+                                    + Vec2::new(0.5, 0.5);
+                                state.add_entity_to_grid(new_entity_vid, tile_pos);
+                            }
+                        }
+                    } else {
+                        // print a swapped item was deleted...
+                        audio.play_sound_effect(SoundEffect::CantUse);
+                    }
+                }
+            }
+        }
+    }
+
     // --- Player Item Use Logic ---
-    let use_item = state.playing_inputs.space
-        || state.playing_inputs.arrow_down
-        || state.playing_inputs.arrow_up
-        || state.playing_inputs.arrow_left
-        || state.playing_inputs.arrow_right
+    let use_item = state.playing_inputs.use_center
+        || state.playing_inputs.use_down
+        || state.playing_inputs.use_up
+        || state.playing_inputs.use_left
+        || state.playing_inputs.use_right
         || state.mouse_inputs.left;
 
     // do item use
@@ -244,5 +396,57 @@ pub fn entity_shake_attenuation(state: &mut State, vid: VID) {
         entity.shake -= SHAKE_ATTENUATION_RATE
     } else {
         entity.shake = 0.0
+    }
+}
+
+pub fn drop_item(state: &mut State, audio: &mut Audio, item: Item, pos: IVec2) -> Option<VID> {
+    // Check if the tile is empty or has no item entities
+    let entities_on_tile = state.spatial_grid[pos.x as usize][pos.y as usize]
+        .iter()
+        .filter_map(|vid| state.entity_manager.get_entity(*vid))
+        .collect::<Vec<&Entity>>();
+
+    if entities_on_tile.iter().any(|e| e.type_ == EntityType::Item) {
+        audio.play_sound_effect(SoundEffect::CantUse);
+        return None; // Cannot drop item, tile is occupied by an item entity
+    }
+
+    // Create a new entity for the dropped item
+    if let Some(new_entity_vid) = state.entity_manager.new_entity() {
+        if let Some(entity) = state.entity_manager.get_entity_mut(new_entity_vid) {
+            init_as_item(entity, item);
+            entity.pos = Vec2::new(pos.x as f32, pos.y as f32) + Vec2::new(0.5, 0.5);
+            state.add_entity_to_grid(new_entity_vid, pos);
+            return Some(new_entity_vid);
+        }
+    }
+    None
+}
+
+pub fn set_inventory_index_from_numpad(state: &mut State) {
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity_mut(player_vid) {
+            if state.playing_inputs.select_inventory_index_0 {
+                player.inventory.selected_index = 0;
+            } else if state.playing_inputs.select_inventory_index_1 {
+                player.inventory.selected_index = 1;
+            } else if state.playing_inputs.select_inventory_index_2 {
+                player.inventory.selected_index = 2;
+            } else if state.playing_inputs.select_inventory_index_3 {
+                player.inventory.selected_index = 3;
+            } else if state.playing_inputs.select_inventory_index_4 {
+                player.inventory.selected_index = 4;
+            } else if state.playing_inputs.select_inventory_index_5 {
+                player.inventory.selected_index = 5;
+            } else if state.playing_inputs.select_inventory_index_6 {
+                player.inventory.selected_index = 6;
+            } else if state.playing_inputs.select_inventory_index_7 {
+                player.inventory.selected_index = 7;
+            } else if state.playing_inputs.select_inventory_index_8 {
+                player.inventory.selected_index = 8;
+            } else if state.playing_inputs.select_inventory_index_9 {
+                player.inventory.selected_index = 9;
+            }
+        }
     }
 }
