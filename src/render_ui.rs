@@ -6,7 +6,9 @@ use raylib::{
 };
 
 use crate::{
+    entity::EntityType,
     graphics::Graphics,
+    item::Item,
     render::TILE_SIZE,
     render_primitives::{
         draw_manhattan_range_fill, draw_manhattan_range_outline, draw_manhattan_ring_fill,
@@ -407,23 +409,120 @@ fn draw_text_wrapped(
 }
 
 /// Renders a details panel for the currently selected item on the right side of the screen.
+/// This is a wrapper around the more generic `render_item_details_panel`.
 pub fn render_selected_item_details(
     state: &State,
     graphics: &Graphics,
     screen: &mut RaylibTextureMode<RaylibDrawHandle>,
 ) {
-    // --- UI Layout & Style Constants ---
-    const PANEL_WIDTH: f32 = 250.0;
-    const PANEL_PADDING: f32 = 15.0;
-    const PANEL_ANGLE: f32 = 1.5;
-    const BG_COLOR: Color = Color::new(10, 10, 10, 200);
+    if state.player_vid.is_none() {
+        return;
+    }
 
-    const TITLE_FONT_SIZE: i32 = 24;
-    const DESC_FONT_SIZE: i32 = 18;
+    // 1. Fetch the item from the player's inventory
+    let selected_item =
+        if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
+            player.inventory.selected_entry().map(|entry| &entry.item) // Get a reference
+        } else {
+            None
+        };
+
+    // 2. If an item is selected, calculate the position and call the generic function
+    if let Some(item) = selected_item {
+        const PANEL_WIDTH: f32 = 250.0;
+        let x_pos = graphics.dims.x as f32 - PANEL_WIDTH - 30.0;
+        let y_pos = graphics.dims.y as f32 * 0.6;
+
+        render_item_details_panel(screen, graphics, item, x_pos, y_pos, "Selected");
+    }
+}
+
+/// Renders a details panel for the item currently below the player. if there is one
+/// render_item_below_player(state, graphics, screen);
+pub fn render_item_below_player(
+    state: &State,
+    graphics: &Graphics,
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+) {
+    if state.player_vid.is_none() {
+        return;
+    }
+
+    if let Some(player_vid) = state.player_vid {
+        if let Some(player) = state.entity_manager.get_entity(player_vid) {
+            // Get the tile position below the player
+            let player_tile_pos = player.pos.as_ivec2();
+
+            // pub spatial_grid: Vec<Vec<Vec<VID>>>,
+
+            // loop through the grid and get any entity which is type_ Item
+            let item_below = state
+                .spatial_grid
+                .get(player_tile_pos.x as usize)
+                .and_then(|col| col.get(player_tile_pos.y as usize))
+                .and_then(|cell| {
+                    cell.iter().find_map(|vid| {
+                        state.entity_manager.get_entity(*vid).and_then(|entity| {
+                            if entity.type_ == EntityType::Item {
+                                Some(entity)
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                });
+
+            // If there's an item below, render its details panel
+            if let Some(item_entity) = item_below {
+                if let Some(item) = item_entity.item {
+                    const PANEL_WIDTH: f32 = 250.0;
+                    let x_pos = graphics.dims.x as f32 - PANEL_WIDTH * 2.2 - 30.0;
+                    let y_pos = graphics.dims.y as f32 * 0.6;
+
+                    render_item_details_panel(screen, graphics, &item, x_pos, y_pos, "Item Below");
+                }
+            }
+        }
+    }
+}
+
+/// Generic function to render a compact, themed details panel for any given item at a specific position.
+pub fn render_item_details_panel(
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+    graphics: &Graphics,
+    item: &Item,
+    x_pos: f32,
+    y_pos: f32,
+    label: &str,
+) {
+    // --- UI Layout & Style ---
+    const PANEL_WIDTH: f32 = 240.0;
+    const PANEL_HEIGHT: f32 = 270.0;
+    const PANEL_PADDING: f32 = 12.0;
+    const LINE_SPACING: f32 = 4.0;
+    const SECTION_SPACING: f32 = 8.0;
+
+    // --- Themed Style & Offsets ---
+    const BANNER_OFFSET: Vector2 = Vector2::new(-20.0, -15.0); // <-- Adjust banner position
+    const TOP_PANEL_OFFSET: Vector2 = Vector2::new(-8.0, -8.0); // <-- Adjust top panel offset
+
+    const BASE_ANGLE: f32 = 1.0;
+    const TOP_ANGLE: f32 = 2.0;
+    const BASE_BG_COLOR: Color = Color::new(10, 10, 10, 210);
+    const TOP_BG_COLOR: Color = Color::new(25, 25, 25, 220);
+
+    // --- Banner Style ---
+    const BANNER_HEIGHT: f32 = 35.0;
+    const BANNER_ANGLE: f32 = -2.0;
+    const BANNER_COLOR: Color = Color::new(140, 40, 40, 230);
+    const BANNER_LABEL_FONT_SIZE: i32 = 20;
+    const BANNER_LABEL_COLOR: Color = Color::WHITE;
+    const BANNER_SHADOW_COLOR: Color = Color::new(0, 0, 0, 150);
+
+    // --- Font & Text Style ---
+    const TITLE_FONT_SIZE: i32 = 22;
+    const DESC_FONT_SIZE: i32 = 16;
     const STAT_FONT_SIZE: i32 = 16;
-    const LINE_SPACING: f32 = 5.0;
-    const SECTION_SPACING: f32 = 15.0;
-
     const TITLE_COLOR: Color = Color::WHITE;
     const DESC_COLOR: Color = Color::new(180, 180, 180, 255);
     const STAT_KEY_COLOR: Color = Color::new(150, 150, 150, 255);
@@ -431,106 +530,106 @@ pub fn render_selected_item_details(
     const STATUS_READY_COLOR: Color = Color::new(120, 220, 120, 255);
     const STATUS_COOLDOWN_COLOR: Color = Color::new(220, 180, 120, 255);
 
-    // just return if no player vid
-    if state.player_vid.is_none() {
-        return;
-    }
+    // --- 1. Draw Themed Background Layers for the Panel ---
+    let panel_y_pos = y_pos + 20.0; // Shift panel down to make room for banner
+    let base_rect = Rectangle::new(x_pos, panel_y_pos, PANEL_WIDTH, PANEL_HEIGHT);
+    screen.draw_rectangle_pro(base_rect, Vector2::zero(), BASE_ANGLE, BASE_BG_COLOR);
 
-    let selected_item =
-        if let Some(player) = state.entity_manager.get_entity(state.player_vid.unwrap()) {
-            player.inventory.selected_entry().map(|entry| entry.item)
-        } else {
-            None
-        };
+    let top_rect = Rectangle::new(
+        x_pos + TOP_PANEL_OFFSET.x,
+        panel_y_pos + TOP_PANEL_OFFSET.y,
+        PANEL_WIDTH,
+        PANEL_HEIGHT,
+    );
+    screen.draw_rectangle_pro(top_rect, Vector2::zero(), TOP_ANGLE, TOP_BG_COLOR);
 
-    if let Some(item) = selected_item {
-        let x_pos = graphics.dims.x as f32 - PANEL_WIDTH - 30.0;
-        let y_pos = 120.0;
-        let panel_height = graphics.dims.y as f32 - y_pos - 30.0;
+    // --- 2. Draw the Banner ---
+    let banner_rect = Rectangle::new(
+        x_pos + BANNER_OFFSET.x,
+        y_pos + BANNER_OFFSET.y,
+        PANEL_WIDTH + 20.0,
+        BANNER_HEIGHT,
+    );
+    screen.draw_rectangle_pro(banner_rect, Vector2::zero(), BANNER_ANGLE, BANNER_COLOR);
 
-        screen.draw_rectangle_pro(
-            Rectangle::new(x_pos, y_pos, PANEL_WIDTH, panel_height),
-            Vector2::zero(),
-            PANEL_ANGLE,
-            BG_COLOR,
-        );
+    // --- 3. Draw Banner Label with Shadow ---
+    let text_width = screen.measure_text(label, BANNER_LABEL_FONT_SIZE);
+    let text_x = (banner_rect.x + (banner_rect.width / 2.0) - (text_width as f32 / 2.0)) as i32;
+    let text_y = (banner_rect.y - 3.0 + (banner_rect.height / 2.0)
+        - (BANNER_LABEL_FONT_SIZE as f32 / 2.0)) as i32;
 
-        let mut current_y = y_pos + PANEL_PADDING;
-        let content_x = x_pos + PANEL_PADDING;
-        let content_width = PANEL_WIDTH - (PANEL_PADDING * 2.0);
+    // Shadow (drawn first)
+    screen.draw_text(
+        label,
+        text_x + 2,
+        text_y + 2,
+        BANNER_LABEL_FONT_SIZE,
+        BANNER_SHADOW_COLOR,
+    );
+    // Main Text
+    screen.draw_text(
+        label,
+        text_x,
+        text_y,
+        BANNER_LABEL_FONT_SIZE,
+        BANNER_LABEL_COLOR,
+    );
 
-        // 1. Item Name (Title) & Count (if stackable)
-        let title_text = if item.max_count > 1 {
-            format!("{} ({} / {})", item.name, item.count, item.max_count)
-        } else {
-            item.name.to_string()
-        };
-        screen.draw_text(
-            &title_text,
-            content_x as i32,
-            current_y as i32,
-            TITLE_FONT_SIZE,
-            TITLE_COLOR,
-        );
-        current_y += TITLE_FONT_SIZE as f32 + LINE_SPACING * 2.0;
+    // --- 4. Define Content Area (relative to the top panel layer) ---
+    let content_x = top_rect.x + PANEL_PADDING;
+    let mut current_y = top_rect.y + PANEL_PADDING;
+    let content_width = PANEL_WIDTH - (PANEL_PADDING * 2.0);
 
-        // 2. Item Description
-        draw_text_wrapped(
-            screen,
-            item.description,
-            content_x,
-            current_y,
-            content_width,
-            DESC_FONT_SIZE,
-            LINE_SPACING,
-            DESC_COLOR,
-        );
-        let desc_lines = (item.description.len() as f32 / 25.0).ceil();
-        current_y += desc_lines * (DESC_FONT_SIZE as f32 + LINE_SPACING) + SECTION_SPACING;
+    // --- 5. Draw Panel Content ---
 
-        // --- Core Stats ---
-        {
-            let value = format!("{} - {}", item.min_range, item.range);
-            let key_text = "Range: ";
-            screen.draw_text(
-                key_text,
-                content_x as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_KEY_COLOR,
-            );
-            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
-            screen.draw_text(
-                &value,
-                (content_x + key_width) as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_VALUE_COLOR,
-            );
-            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
-        }
-        {
-            let value = format!("{:.1}s", item.use_cooldown);
-            let key_text = "Cooldown: ";
-            screen.draw_text(
-                key_text,
-                content_x as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_KEY_COLOR,
-            );
-            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
-            screen.draw_text(
-                &value,
-                (content_x + key_width) as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_VALUE_COLOR,
-            );
-            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
-        }
+    // Item Name & Count
+    let title_text = if item.max_count > 1 {
+        format!("{} ({} / {})", item.name, item.count, item.max_count)
+    } else {
+        item.name.to_string()
+    };
+    screen.draw_text(
+        &title_text,
+        content_x as i32,
+        current_y as i32,
+        TITLE_FONT_SIZE,
+        TITLE_COLOR,
+    );
+    current_y += TITLE_FONT_SIZE as f32 + SECTION_SPACING;
 
-        // --- Status (Live Cooldown) ---
+    // Item Description
+    let desc_height = draw_text_wrapped_and_get_height(
+        screen,
+        item.description,
+        content_x,
+        current_y,
+        content_width,
+        DESC_FONT_SIZE,
+        LINE_SPACING,
+        DESC_COLOR,
+    );
+    current_y += desc_height + SECTION_SPACING * 2.0;
+
+    // Core Stats (only shown if relevant)
+    current_y = draw_stat_if(
+        screen,
+        item.range > 0.0,
+        "Range",
+        &format!("{} - {}", item.min_range.round(), item.range.round()),
+        content_x,
+        current_y,
+    );
+    current_y = draw_stat_if(
+        screen,
+        item.use_cooldown > 0.0,
+        "Cooldown",
+        &format!("{:.1}s", item.use_cooldown),
+        content_x,
+        current_y,
+    );
+
+    // Status (Live Cooldown)
+    if item.use_cooldown > 0.0 {
         let (status_text, status_color) = if item.use_cooldown_countdown > 0.0 {
             (
                 format!("{:.1}s", item.use_cooldown_countdown),
@@ -539,64 +638,127 @@ pub fn render_selected_item_details(
         } else {
             ("Ready".to_string(), STATUS_READY_COLOR)
         };
-        let status_key_text = "Status: ";
-        screen.draw_text(
-            status_key_text,
-            content_x as i32,
-            current_y as i32,
-            STAT_FONT_SIZE,
-            STAT_KEY_COLOR,
-        );
-        let key_width = screen.measure_text(status_key_text, STAT_FONT_SIZE) as f32;
-        screen.draw_text(
+        current_y = draw_stat(
+            screen,
+            "Status",
             &status_text,
-            (content_x + key_width) as i32,
-            current_y as i32,
-            STAT_FONT_SIZE,
+            content_x,
+            current_y,
             status_color,
         );
-        current_y += STAT_FONT_SIZE as f32 + SECTION_SPACING;
+    }
 
-        // --- Properties (Booleans) ---
-        {
-            let value = if item.consume_on_use { "Yes" } else { "No" };
-            let key_text = "Consumable: ";
-            screen.draw_text(
-                key_text,
-                content_x as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_KEY_COLOR,
-            );
-            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
-            screen.draw_text(
-                value,
-                (content_x + key_width) as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_VALUE_COLOR,
-            );
-            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
+    current_y += SECTION_SPACING;
+
+    // Properties
+    current_y = draw_stat(
+        screen,
+        "Consumable",
+        if item.consume_on_use { "Yes" } else { "No" },
+        content_x,
+        current_y,
+        STAT_VALUE_COLOR,
+    );
+    draw_stat(
+        screen,
+        "Droppable",
+        if item.droppable { "Yes" } else { "No" },
+        content_x,
+        current_y,
+        STAT_VALUE_COLOR,
+    );
+}
+
+// --- HELPER FUNCTIONS ---
+
+/// An enhanced version of draw_text_wrapped that returns the total height of the text block.
+fn draw_text_wrapped_and_get_height(
+    d: &mut RaylibTextureMode<RaylibDrawHandle>,
+    text: &str,
+    x: f32,
+    y: f32,
+    max_width: f32,
+    font_size: i32,
+    line_spacing: f32,
+    color: Color,
+) -> f32 {
+    let mut y_offset = 0.0;
+    let mut current_line = String::new();
+    let mut lines = Vec::new();
+
+    if text.is_empty() {
+        return 0.0;
+    }
+
+    for word in text.split_whitespace() {
+        let test_line = if current_line.is_empty() {
+            word.to_string()
+        } else {
+            format!("{} {}", current_line, word)
+        };
+
+        if d.measure_text(&test_line, font_size) as f32 > max_width {
+            lines.push(current_line);
+            current_line = word.to_string();
+        } else {
+            current_line = test_line;
         }
-        {
-            let value = if item.droppable { "Yes" } else { "No" };
-            let key_text = "Droppable: ";
-            screen.draw_text(
-                key_text,
-                content_x as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_KEY_COLOR,
-            );
-            let key_width = screen.measure_text(key_text, STAT_FONT_SIZE) as f32;
-            screen.draw_text(
-                value,
-                (content_x + key_width) as i32,
-                current_y as i32,
-                STAT_FONT_SIZE,
-                STAT_VALUE_COLOR,
-            );
-            current_y += STAT_FONT_SIZE as f32 + LINE_SPACING;
-        }
+    }
+    lines.push(current_line);
+
+    for line in lines {
+        d.draw_text(&line, x as i32, (y + y_offset) as i32, font_size, color);
+        y_offset += font_size as f32 + line_spacing;
+    }
+
+    y_offset - line_spacing // Return total height without the last line's spacing
+}
+
+/// Helper to draw a key-value stat line and return the new Y position.
+fn draw_stat(
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+    key: &str,
+    value: &str,
+    x: f32,
+    y: f32,
+    value_color: Color,
+) -> f32 {
+    const STAT_FONT_SIZE: i32 = 16;
+    const STAT_KEY_COLOR: Color = Color::new(150, 150, 150, 255);
+    const LINE_SPACING: f32 = 4.0;
+
+    let key_text = format!("{}: ", key);
+    screen.draw_text(
+        &key_text,
+        x as i32,
+        y as i32,
+        STAT_FONT_SIZE,
+        STAT_KEY_COLOR,
+    );
+    let key_width = screen.measure_text(&key_text, STAT_FONT_SIZE) as f32;
+    screen.draw_text(
+        value,
+        (x + key_width) as i32,
+        y as i32,
+        STAT_FONT_SIZE,
+        value_color,
+    );
+
+    y + STAT_FONT_SIZE as f32 + LINE_SPACING
+}
+
+/// Wrapper for draw_stat that only draws if the condition is true.
+fn draw_stat_if(
+    screen: &mut RaylibTextureMode<RaylibDrawHandle>,
+    condition: bool,
+    key: &str,
+    value: &str,
+    x: f32,
+    y: f32,
+) -> f32 {
+    if condition {
+        draw_stat(screen, key, value, x, y, Color::WHITE)
+    } else {
+        y
     }
 }

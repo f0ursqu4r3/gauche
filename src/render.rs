@@ -14,8 +14,8 @@ use crate::{
     render_entities, render_tiles,
     render_ui::{
         draw_cursor, render_debug_info, render_hand_item, render_health_bar, render_inventory,
-        render_item_range_indicator_base, render_item_range_indicator_top,
-        render_selected_item_details,
+        render_item_below_player, render_item_range_indicator_base,
+        render_item_range_indicator_top, render_selected_item_details,
     },
     state::{Mode, State},
     tile::get_tile_sprite,
@@ -213,11 +213,12 @@ pub fn render_playing(
     }
 
     render_health_bar(state, graphics, screen);
-    render_debug_info(state, graphics, screen);
+    // render_debug_info(state, graphics, screen);
 
     // draw inventory
     render_inventory(state, graphics, screen);
     render_selected_item_details(state, graphics, screen);
+    render_item_below_player(state, graphics, screen);
 }
 
 // --- Stub Functions ---

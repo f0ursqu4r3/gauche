@@ -24,7 +24,7 @@ add more tiles
 more tile break features like spilling water or acid or fire or oil or something
 add more weapons
 add more items in general
-add more enemies
+add more enemies  
     tiny zomb
     child zombie
     woman zombie
@@ -46,7 +46,34 @@ add a fire function of some sort (maybe a torch item)
 * picking up items - e
 * bugfix the item insert overflow not priorizing selected slot
 
-add ground item detail view
+* add ground item detail view
+    * move the item detail view to its own function so you can draw multiple on the screen 
+make the grid its own bottled object with an interface bc its a pain in the ass doing what were doing now
+    search functions
+    search for item function
+    try to put an item functions etc
 move item pickup to helpers 
 make a grabby entity that will come pick up items
 add a sound when picking up items
+remove the sound where you cant walk into a tile
+
+maybe a button where you interact with a thing?
+maybe f should be pickup and e for interact. for doors or levers or something
+maybe add a door that will toggle its sprite and impassability on interact
+how can interact choose which thing is being interacted with?
+maybe space needs to use an item, becoming a compound action, where an arrow key press doesnt just instantly use
+only modifies the use position with space 
+
+trap tiles
+    spike trap
+    spikes
+    trip wire
+    mine
+    caltrops
+
+fire
+
+convert all rng to be based on current frame
+
+levels?
+level editor?

@@ -4,6 +4,7 @@ mod entity_behavior;
 mod entity_manager;
 mod entity_templates;
 mod graphics;
+mod grid;
 mod inputs;
 mod inventory;
 mod item;
