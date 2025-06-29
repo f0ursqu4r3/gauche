@@ -260,13 +260,11 @@ pub fn init_playing_state(state: &mut State, _graphics: &mut Graphics) {
 pub fn flip_stage_tiles(state: &mut State) {
     for x in 0..state.stage.get_width() {
         for y in 0..state.stage.get_height() {
-            if let Some(tile_data) = state.stage.get_tile(x, y) {
+            if let Some(tile_data) = state.stage.get_tile_mut(x, y) {
                 if tile_data.flip_speed > 0 && state.frame % tile_data.flip_speed as u32 == 0 {
                     let new_variant =
-                        (tile_data.variant + 1) % get_tile_variants(&tile_data).len() as u8;
-                    let mut new_tile_data = tile_data.clone();
-                    new_tile_data.variant = new_variant;
-                    state.stage.set_tile(x, y, new_tile_data);
+                        (tile_data.variant + 1) % get_tile_variants(tile_data).len() as u8;
+                    tile_data.variant = new_variant;
                 }
             }
         }
