@@ -13,6 +13,7 @@ use crate::{
         ready_to_move, step_attack_cooldown, step_inventory_item_cooldowns, step_move_cooldown,
         step_rail_layer, step_train, wander,
     },
+    entity_manager,
     entity_templates::init_as_item,
     graphics::Graphics,
     item::Item,
@@ -71,6 +72,22 @@ fn step_title(state: &mut State, _audio: &mut Audio) {
         // to ensure `init_playing_state` is called.
         // This remains for potential future menu logic.
     }
+}
+
+/// print the size in memory of all of state and its components
+pub fn exhaustive_state_size(state: &State) -> usize {
+    use std::mem::size_of;
+
+    let size = size_of::<State>()
+        + state.stage.get_width() * state.stage.get_height() * size_of::<TileData>()
+        // + state.entity_manager.size()
+        + state.spatial_grid.iter().map(|row| row.len() * size_of::<VID>()).sum::<usize>()
+        // + state.particles.size()
+        + size_of::<Mode>()
+        + size_of::<bool>() * 5 // game_over, pause, win, frame_pause, time_since_last_update
+        + size_of::<u32>() * 3; // frame, scene_frame, points
+
+    size
 }
 
 fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
