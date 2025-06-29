@@ -21,7 +21,7 @@ use crate::{
     render::TILE_SIZE,
     stage::{flip_stage_tiles, TileData},
     state::{Mode, State},
-    tile::{self, can_build_on, Tile},
+    tile::{self, can_build_on, flip_tile, tile_shake_attenuation, Tile},
 };
 
 pub const PLACE_TILE_COOLDOWN: f32 = 0.05; // Cooldown for placing tiles in seconds
@@ -342,6 +342,15 @@ fn step_playing(state: &mut State, audio: &mut Audio, graphics: &mut Graphics) {
         step_inventory_item_cooldowns(state, vid);
         step_rail_layer(state, audio, vid);
         step_train(state, audio, vid);
+    }
+
+    // loop through tile coords
+    for y in 0..state.stage.get_height() {
+        for x in 0..state.stage.get_width() {
+            let pos = IVec2::new(x as i32, y as i32);
+            tile_shake_attenuation(state, pos);
+            flip_tile(state, pos);
+        }
     }
 
     // flip tile variants

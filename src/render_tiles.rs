@@ -1,4 +1,5 @@
 use glam::Vec2;
+use rand::random_range;
 use raylib::{
     color::Color,
     math::{Rectangle, Vector2},
@@ -57,7 +58,6 @@ pub fn render_tile_health_bar(
 }
 
 /// Iterates through the stage and renders all visible tiles and their health bars.
-/// Iterates through the stage and renders all visible tiles and their health bars.
 pub fn render_tiles(
     d: &mut RaylibTextureMode<RaylibDrawHandle>,
     state: &State,
@@ -93,13 +93,24 @@ pub fn render_tiles(
 
                     // Only draw the tile and its health bar if it's visible at all.
                     if alpha > 0 {
+                        // --- NEW: Apply shake effect ---
+                        let final_pixel_pos = if tile_data.shake > 0.0 {
+                            let shake_offset = tile_data.shake * TILE_SIZE * 0.1; // Make tile shake less intense
+                            let shake_x = random_range(-shake_offset..shake_offset);
+                            let shake_y = random_range(-shake_offset..shake_offset);
+                            tile_pixel_pos + Vec2::new(shake_x, shake_y)
+                        } else {
+                            tile_pixel_pos
+                        };
+
                         let source_rec =
                             Rectangle::new(0.0, 0.0, texture.width as f32, texture.height as f32);
 
                         // The destination rectangle's x/y should be the *center* of the tile for rotation.
+                        // Use the final, shaken position here.
                         let dest_rec = Rectangle::new(
-                            tile_pixel_pos.x + (TILE_SIZE / 2.0),
-                            tile_pixel_pos.y + (TILE_SIZE / 2.0),
+                            final_pixel_pos.x + (TILE_SIZE / 2.0),
+                            final_pixel_pos.y + (TILE_SIZE / 2.0),
                             TILE_SIZE,
                             TILE_SIZE,
                         );
@@ -116,8 +127,9 @@ pub fn render_tiles(
                             Color::new(255, 255, 255, alpha),
                         );
 
-                        // Call the dedicated function to render the health bar (it is not rotated).
-                        render_tile_health_bar(d, &tile_data, tile_pixel_pos, alpha);
+                        // Call the dedicated function to render the health bar.
+                        // Pass the final, shaken position so the bar moves with the tile.
+                        render_tile_health_bar(d, &tile_data, final_pixel_pos, alpha);
                     }
                 }
             }

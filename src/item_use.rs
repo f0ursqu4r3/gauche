@@ -10,7 +10,7 @@ use crate::{
     render::TILE_SIZE,
     stage::TileData,
     state::State,
-    tile::{self, damage_tile, Tile},
+    tile::{self, damage_tile, tile_shake_area_at, Tile},
     utils::new_york_dist,
 };
 
@@ -247,6 +247,12 @@ pub fn use_fist(
             DamageType::Punch,
             user_pos,
         ) {
+            tile_shake_area_at(
+                state,
+                target_tile_pos,
+                0.3, //shake amount
+                2.0, //dist
+            );
             return true; // damage_tile returns true if it successfully dealt damage.
         }
     }

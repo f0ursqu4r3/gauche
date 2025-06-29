@@ -15,7 +15,7 @@ use crate::{
     stage::TileData,
     state::{get_adjacent_entities, State},
     step::{entity_step_sound_lookup, lean_entity, TIMESTEP},
-    tile::{is_tile_occupied, Tile},
+    tile::{is_tile_occupied, tile_shake_area_at, Tile},
 };
 
 pub fn wander(state: &mut State, audio: &mut Audio, vid: VID) {
@@ -808,6 +808,8 @@ pub fn step_train(state: &mut State, audio: &mut Audio, vid: VID) {
                 hit_entities.push(entity.vid);
             }
         }
+
+        tile_shake_area_at(state, new_pos, 2.0, 2.0);
 
         // fetch a target position, if none, dont do this part
 

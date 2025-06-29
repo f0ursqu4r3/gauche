@@ -73,6 +73,14 @@ impl Stage {
         }
     }
 
+    pub fn get_tile_mut(&mut self, x: usize, y: usize) -> Option<&mut TileData> {
+        if x < self.tiles.len() && y < self.tiles[0].len() {
+            Some(&mut self.tiles[x][y])
+        } else {
+            None
+        }
+    }
+
     pub fn set_tile(&mut self, x: usize, y: usize, tile_data: TileData) {
         if x < self.tiles.len() && y < self.tiles[0].len() {
             self.tiles[x][y] = tile_data;

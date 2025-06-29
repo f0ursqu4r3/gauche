@@ -283,3 +283,67 @@ pub fn tile_damage_sound_lookup(tile: &Tile) -> SoundEffect {
         _ => SoundEffect::Explosion1,
     }
 }
+
+pub fn flip_tile(state: &mut State, pos: IVec2) {
+    if let Some(tile_data) = state.stage.get_tile_mut(pos.x as usize, pos.y as usize) {
+        if tile_data.flip_speed > 0 && state.frame % tile_data.flip_speed as u32 == 0 {
+            let new_variant = (tile_data.variant + 1) % get_tile_variants(tile_data).len() as u8;
+            tile_data.variant = new_variant;
+        }
+    }
+}
+
+pub fn tile_shake_attenuation(state: &mut State, pos: IVec2) {
+    // Get the tile at the given position
+    if let Some(tile_data) = state.stage.get_tile_mut(pos.x as usize, pos.y as usize) {
+        // Reduce the shake value of the tile
+        if tile_data.shake > 0.0 {
+            let new_shake = (tile_data.shake - 0.01).max(0.0);
+            tile_data.shake = new_shake;
+        }
+    }
+}
+
+/// Given a coordinate, increases the shake value of all tiles within a distance,
+/// scaling the shake magnitude linearly with distance from the center.
+pub fn tile_shake_area_at(state: &mut State, pos: IVec2, magnitude: f32, dist: f32) {
+    // To avoid iterating the whole map, we define a smaller bounding box.
+    let stage_dims = state.stage.get_dims();
+    let search_radius = dist.ceil() as i32;
+
+    // Calculate the top-left and bottom-right corners of the search area,
+    // clamping them to the stage's boundaries.
+    let start_x = (pos.x - search_radius).max(0);
+    let start_y = (pos.y - search_radius).max(0);
+    let end_x = (pos.x + search_radius).min(stage_dims.x - 1);
+    let end_y = (pos.y + search_radius).min(stage_dims.y - 1);
+
+    // Iterate only within the more efficient bounding box.
+    for y in start_y..=end_y {
+        for x in start_x..=end_x {
+            let tile_pos = IVec2::new(x, y);
+
+            // Calculate the actual distance to check if it's inside the circle.
+            let distance = (tile_pos - pos).as_vec2().length();
+
+            if distance <= dist {
+                // Now we can use the more direct get_tile_mut
+                if let Some(tile_data) = state.stage.get_tile_mut(x as usize, y as usize) {
+                    // Calculate linear falloff (1.0 at center, 0.0 at edge).
+                    // Avoid division by zero if dist is 0.
+                    let falloff = if dist > 0.0 {
+                        (dist - distance) / dist
+                    } else {
+                        1.0
+                    };
+                    let shake_to_add = falloff * magnitude;
+
+                    if shake_to_add > 0.0 {
+                        // Add the new shake and clamp to a max value to prevent excessive shaking.
+                        tile_data.shake = (tile_data.shake + shake_to_add).min(1.0);
+                    }
+                }
+            }
+        }
+    }
+}
